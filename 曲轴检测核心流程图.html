@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曲轴检测核心流程图（子流程）</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'SimHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.8em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            font-weight: 300;
+            margin-top: 10px;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            padding: 8px 0;
+            color: #34495e;
+            line-height: 1.6;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .info-box li:before {
+            content: "▸";
+            position: absolute;
+            left: 5px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .diagram-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        #mermaidDiagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            font-size: 1em;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 2px solid #ecf0f1;
+            color: #7f8c8d;
+            font-size: 0.95em;
+        }
+
+        .legend {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 25px;
+        }
+
+        .legend h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .legend-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-text {
+            flex: 1;
+            font-size: 0.95em;
+            color: #34495e;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Mermaid 样式优化 */
+        .mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 曲轴检测核心流程图</h1>
+            <p class="subtitle">三项检测详细流程 · 跳动量 · 粗糙度 · 直径</p>
+        </header>
+
+        <div class="info-box">
+            <h3>📋 检测流程说明</h3>
+            <ul>
+                <li><strong>检测对象：</strong>DF8B型号（9个轴颈）/ HXN5B型号（7个轴颈）</li>
+                <li><strong>检测项目：</strong>跳动量检测 → 粗糙度检测（Ra） → 直径检测</li>
+                <li><strong>检测策略：</strong>单项不合格标记但继续检测，最终综合判定</li>
+                <li><strong>异常处理：</strong>设备异常时立即停止并记录，支持断点恢复</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="zoomIn()">🔍 放大</button>
+            <button class="btn btn-primary" onclick="zoomOut()">🔍 缩小</button>
+            <button class="btn btn-secondary" onclick="resetZoom()">↺ 重置视图</button>
+            <button class="btn btn-success" onclick="exportDiagram()">💾 导出图片</button>
+        </div>
+
+        <div class="diagram-container" id="diagramContainer">
+            <div class="execution-order" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 2px solid #667eea;">
+                <strong style="color: #667eea; font-size: 1.1em;">⚙️ 执行顺序：跳动量检测 → 粗糙度检测 → 直径检测（本图按模块展示）</strong>
+            </div>
+            <div id="mermaidDiagram" class="mermaid">
+flowchart TD
+    A[开始本曲轴检测] --> B[按型号确定轴颈数量 N<br/>DF8B=9 / HXN5B=7]
+    B --> START_INSPECT[开始三项检测]
+
+    %% 跳动量检测模块
+    START_INSPECT --> T_START[跳动量检测]
+    subgraph S1[" 跳动量检测模块 "]
+        T_START --> T1[驱动电机旋转曲轴<br/>跳动量传感器持续采样]
+        T1 --> T2[随机选取 3 秒后的点<br/>作为标准点]
+        T2 --> T3[按 0.01″ 频率取样<br/>计算各点与标准点差值绝对值最大值]
+        T3 --> T4[与跳动量限值比较<br/>得到当前轴颈判定]
+        T4 --> T5{是否还有未测轴颈?}
+        T5 -->|是| T1
+        T5 -->|否| T6[生成跳动量结果表<br/>编号 / 跳动量值 / 判定]
+    end
+
+    %% 粗糙度检测模块
+    T6 --> R_START[粗糙度检测]
+    subgraph S2[" 粗糙度检测模块 Ra "]
+        R_START --> R1[支撑板1就位<br/>粗糙度传感器到位]
+        R1 --> R2[轴颈循环 1..N<br/>曲轴旋转，实时读取表面高度变化]
+        R2 --> R3[计算单轴颈 Ra 值 μm]
+        R3 --> R4[与 Ra 限值比较<br/>不同型号限值可配置，例如 DF8B: Ra ≤ 0.25μm]
+        R4 --> R5{是否还有未测轴颈?}
+        R5 -->|是| R2
+        R5 -->|否| R6[生成粗糙度结果表<br/>编号 / Ra 值 / 判定]
+    end
+
+    %% 直径检测模块
+    R6 --> D_START[直径检测]
+    subgraph S3[" 直径检测模块 "]
+        D_START --> D1[更换支撑板2<br/>双激光直径传感器就位]
+        D1 --> D2[测量传感器1、2当前位置<br/>位置 -50 确认 0 点]
+        D2 --> D3[轴颈循环 1..N<br/>每轴颈测左/右两点]
+        D3 --> D4[同步采集传感器1/2数值]
+        D4 --> D5[两数值相加取绝对值<br/>与标称尺寸及公差比较]
+        D5 --> D6[输出当前轴颈数据<br/>传感器1值 / 传感器2值 / 差值 / 当前轴颈判定]
+        D6 --> D7{是否还有未测轴颈?}
+        D7 -->|是| D3
+        D7 -->|否| D8[生成直径结果表<br/>编号 / 传感器1 / 传感器2 / 差值 / 判定]
+        D8 --> D9[直径项目整体判定<br/>任一轴颈直径不合格，则直径检测整体不合格]
+    end
+
+    %% 三项结果汇总到整机结果
+    T6 --> FINAL[整机结果判定]
+    R6 --> FINAL
+    D9 --> FINAL
+
+    FINAL[整机结果：综合跳动量 / 粗糙度 / 直径三项<br/>判定整根曲轴合格 / 不合格<br/>检测过程中单项不合格仅做标记，不提前终止剩余检测]
+
+    %% 设备异常通用处理
+    A -. 任何阶段 .-> X[设备异常处理说明:<br/>机械臂报警/急停/越界 → 立即停止检测，记录检测中断<br/>传感器通讯中断/驱动异常 → 停止当前项目并提示错误<br/>断电/程序异常 → 自动保存为检测中断，重启复位]
+
+    %% 样式定义
+    style A fill:#e1f5e1,stroke:#4caf50,stroke-width:3px
+    style B fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    style START_INSPECT fill:#e1f5e1,stroke:#4caf50,stroke-width:2px
+    
+    style T_START fill:#cfe2ff,stroke:#0d6efd,stroke-width:2px
+    style T2 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    style T5 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    style T6 fill:#d1ecf1,stroke:#0dcaf0,stroke-width:2px
+    
+    style R_START fill:#cfe2ff,stroke:#0d6efd,stroke-width:2px
+    style R5 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    style R6 fill:#d1ecf1,stroke:#0dcaf0,stroke-width:2px
+    
+    style D_START fill:#cfe2ff,stroke:#0d6efd,stroke-width:2px
+    style D7 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    style D8 fill:#d1ecf1,stroke:#0dcaf0,stroke-width:2px
+    style D9 fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+    
+    style FINAL fill:#d1e7dd,stroke:#198754,stroke-width:3px
+    style X fill:#f8d7da,stroke:#dc3545,stroke-width:2px
+            </div>
+        </div>
+
+        <div class="legend">
+            <h4>📊 图例说明</h4>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e1f5e1;"></div>
+                    <div class="legend-text"><strong>开始节点</strong> - 检测流程起点</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fff3cd;"></div>
+                    <div class="legend-text"><strong>配置/判断</strong> - 型号配置、条件判断</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #cfe2ff;"></div>
+                    <div class="legend-text"><strong>检测过程</strong> - 三项主要检测流程</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d1ecf1;"></div>
+                    <div class="legend-text"><strong>结果输出</strong> - 生成检测结果表</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d1e7dd;"></div>
+                    <div class="legend-text"><strong>完成节点</strong> - 检测完成、综合判定</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f8d7da;"></div>
+                    <div class="legend-text"><strong>异常处理</strong> - 设备异常处理说明</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <h3>🔍 三项检测详细说明</h3>
+            <ul>
+                <li><strong>跳动量检测：</strong>电机驱动曲轴旋转，传感器持续采样，3秒后随机选取标准点，按0.01″频率取样计算最大偏差</li>
+                <li><strong>粗糙度检测：</strong>支撑板1就位，传感器读取表面高度变化，计算Ra值（μm），限值可配置（DF8B: Ra≤0.25μm）</li>
+                <li><strong>直径检测：</strong>支撑板2就位，双激光传感器同步采集左右两点，任一轴颈不合格则直径项目整体不合格</li>
+                <li><strong>综合判定：</strong>三项结果表分别生成后汇总，综合判定整根曲轴合格/不合格，单项不合格仅标记不终止</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>曲轴检测核心流程图（子流程） | 生成时间: <span id="datetime"></span></p>
+            <p style="margin-top: 8px; font-size: 0.9em;">三项检测模块 · 详细流程控制 · 设备异常处理</p>
+        </footer>
+    </div>
+
+    <script>
+        // 初始化 Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 20,
+                nodeSpacing: 80,
+                rankSpacing: 80
+            },
+            themeVariables: {
+                primaryColor: '#cfe2ff',
+                primaryTextColor: '#000',
+                primaryBorderColor: '#0d6efd',
+                lineColor: '#495057',
+                secondaryColor: '#e1f5e1',
+                tertiaryColor: '#fff3cd',
+                fontSize: '16px',
+                fontFamily: 'Microsoft YaHei, SimHei, Arial, sans-serif'
+            }
+        });
+
+        // 缩放功能
+        let currentZoom = 1;
+        const zoomStep = 0.1;
+        const minZoom = 0.3;
+        const maxZoom = 3;
+
+        function zoomIn() {
+            if (currentZoom < maxZoom) {
+                currentZoom += zoomStep;
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > minZoom) {
+                currentZoom -= zoomStep;
+                applyZoom();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const diagram = document.getElementById('mermaidDiagram');
+            diagram.style.transform = `scale(${currentZoom})`;
+            diagram.style.transformOrigin = 'top center';
+        }
+
+        // 导出图片功能
+        async function exportDiagram() {
+            try {
+                const svgElement = document.querySelector('#mermaidDiagram svg');
+                if (!svgElement) {
+                    alert('未找到流程图，请稍后再试');
+                    return;
+                }
+
+                // 创建 canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 获取 SVG 尺寸
+                const bbox = svgElement.getBBox();
+                const scale = 2; // 提高导出质量
+                canvas.width = bbox.width * scale;
+                canvas.height = bbox.height * scale;
+                
+                // 设置白色背景
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 将 SVG 转换为图片
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const img = new Image();
+                const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    
+                    // 下载图片
+                    canvas.toBlob(function(blob) {
+                        const link = document.createElement('a');
+                        link.download = '曲轴检测核心流程图.png';
+                        link.href = URL.createObjectURL(blob);
+                        link.click();
+                    });
+                };
+                
+                img.src = url;
+            } catch (error) {
+                console.error('导出失败:', error);
+                alert('导出图片失败，请使用浏览器的打印功能或截图工具');
+            }
+        }
+
+        // 更新时间
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            document.getElementById('datetime').textContent = now.toLocaleString('zh-CN', options);
+        }
+
+        // 页面加载完成后执行
+        window.addEventListener('load', function() {
+            updateDateTime();
+            
+            // 添加键盘快捷键
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === '=' || e.key === '+') {
+                        e.preventDefault();
+                        zoomIn();
+                    } else if (e.key === '-') {
+                        e.preventDefault();
+                        zoomOut();
+                    } else if (e.key === '0') {
+                        e.preventDefault();
+                        resetZoom();
+                    }
+                }
+            });
+        });
+
+        // 添加拖拽功能
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
+
+        const container = document.getElementById('diagramContainer');
+
+        container.addEventListener('mousedown', function(e) {
+            if (e.target === container || e.target.closest('.mermaid')) {
+                isDragging = true;
+                container.style.cursor = 'grabbing';
+                startX = e.pageX - container.offsetLeft;
+                startY = e.pageY - container.offsetTop;
+                scrollLeft = container.scrollLeft;
+                scrollTop = container.scrollTop;
+            }
+        });
+
+        container.addEventListener('mouseleave', function() {
+            isDragging = false;
+            container.style.cursor = 'default';
+        });
+
+        container.addEventListener('mouseup', function() {
+            isDragging = false;
+            container.style.cursor = 'default';
+        });
+
+        container.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const y = e.pageY - container.offsetTop;
+            const walkX = (x - startX) * 1.5;
+            const walkY = (y - startY) * 1.5;
+            container.scrollLeft = scrollLeft - walkX;
+            container.scrollTop = scrollTop - walkY;
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P5 - 历史记录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #E8EAED;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主窗口容器 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            background-color: #E8EAED;
+            transform-origin: center center;
+        }
+
+        /* 自动缩放 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 顶部标题栏 */
+        .title-bar {
+            height: 45px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .title-left {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .system-title {
+            font-size: 15px;
+            font-weight: normal;
+            color: #FFFFFF;
+        }
+
+        .version {
+            font-size: 10px;
+            color: #A0AEC0;
+        }
+
+        .role-badge {
+            font-size: 12px;
+            color: #E2E8F0;
+        }
+
+        /* 筛选区 */
+        .filter-bar {
+            background-color: #F7FAFC;
+            padding: 15px 30px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            color: #4A5568;
+            white-space: nowrap;
+        }
+
+        .filter-input {
+            width: 160px;
+            height: 32px;
+            padding: 0 10px;
+            font-size: 13px;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .filter-select {
+            width: 140px;
+            height: 32px;
+            padding: 0 10px;
+            font-size: 13px;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .filter-buttons {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 6px 20px;
+            font-size: 13px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-query {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-query:hover {
+            background-color: #3182CE;
+        }
+
+        .btn-reset {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+
+        .btn-reset:hover {
+            background-color: #CBD5E0;
+        }
+
+        /* 管理员工具栏 */
+        .admin-toolbar {
+            background-color: #FFFFFF;
+            padding: 12px 30px;
+            border-bottom: 1px solid #E2E8F0;
+            display: none;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-toolbar.show {
+            display: flex;
+        }
+
+        .toolbar-label {
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .toolbar-btn {
+            padding: 6px 20px;
+            font-size: 13px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-batch-export {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-batch-export:hover:not(:disabled) {
+            background-color: #3182CE;
+        }
+
+        .btn-batch-delete {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .btn-batch-delete:hover:not(:disabled) {
+            background-color: #C53030;
+        }
+
+        /* 主内容区 */
+        .content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background-color: #FFFFFF;
+            margin: 0 20px 20px 20px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 表格区域 */
+        .table-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s;
+        }
+
+        .table-area.with-drawer {
+            width: 60%;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: #F7FAFC;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: left;
+            color: #4A5568;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        th input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #EDF2F7;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+
+        tbody tr:hover {
+            background-color: #EBF8FF;
+        }
+
+        tbody tr.selected {
+            background-color: #BEE3F8;
+        }
+
+        td {
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #2D3748;
+        }
+
+        td input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* 标签样式 */
+        .badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-pass {
+            background-color: #C6F6D5;
+            color: #22543D;
+        }
+
+        .badge-fail {
+            background-color: #FED7D7;
+            color: #742A2A;
+        }
+
+        .badge-exported {
+            background-color: #BEE3F8;
+            color: #2C5282;
+        }
+
+        .badge-not-exported {
+            background-color: #E2E8F0;
+            color: #718096;
+        }
+
+        .badge-completed {
+            background-color: #C6F6D5;
+            color: #22543D;
+        }
+
+        .badge-interrupted {
+            background-color: #FEEBC8;
+            color: #C05621;
+        }
+
+        /* 详情抽屉 */
+        .detail-drawer {
+            width: 0;
+            background-color: #F7FAFC;
+            border-left: 2px solid #E2E8F0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s;
+        }
+
+        .detail-drawer.open {
+            width: 40%;
+        }
+
+        .drawer-header {
+            padding: 15px 20px;
+            background-color: #FFFFFF;
+            border-bottom: 2px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2D3748;
+        }
+
+        .drawer-close {
+            font-size: 24px;
+            color: #A0AEC0;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .drawer-close:hover {
+            color: #718096;
+        }
+
+        .drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .drawer-section {
+            background-color: #FFFFFF;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+            border-bottom: 1px solid #EDF2F7;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row-label {
+            color: #718096;
+        }
+
+        .info-row-value {
+            color: #2D3748;
+            font-weight: 600;
+        }
+
+        /* Tab 在抽屉中 */
+        .drawer-tabs {
+            display: flex;
+            background-color: #F7FAFC;
+            border-bottom: 2px solid #E2E8F0;
+            margin-bottom: 15px;
+        }
+
+        .drawer-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .drawer-tab:hover {
+            background-color: #EDF2F7;
+        }
+
+        .drawer-tab.active {
+            color: #2C5282;
+            background-color: #FFFFFF;
+            border-bottom-color: #4299E1;
+        }
+
+        .drawer-tab-content {
+            display: none;
+        }
+
+        .drawer-tab-content.active {
+            display: block;
+        }
+
+        .drawer-table {
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .drawer-table th {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .drawer-table td {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .drawer-actions {
+            padding: 15px 20px;
+            background-color: #FFFFFF;
+            border-top: 2px solid #E2E8F0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .drawer-btn {
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-delete {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .btn-delete:hover {
+            background-color: #C53030;
+        }
+
+        .btn-view-report {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-view-report:hover {
+            background-color: #3182CE;
+        }
+
+        /* 底部状态栏 */
+        .statusbar {
+            height: 28px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            font-size: 11px;
+        }
+
+        .status-left {
+            flex: 1;
+        }
+
+        .status-right {
+            flex: 1;
+            text-align: right;
+        }
+
+        .status-normal {
+            color: #68D391;
+        }
+
+        /* 成功提示 */
+        .success-toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #48BB78;
+            color: #FFFFFF;
+            padding: 15px 30px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+            z-index: 2000;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .success-toast.show {
+            display: block;
+        }
+
+        /* 模态对话框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            min-width: 400px;
+            max-width: 600px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: #4A5568;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            width: 120px;
+            font-size: 14px;
+            color: #4A5568;
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        .form-input {
+            flex: 1;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 14px;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .form-input:disabled {
+            background-color: #EDF2F7;
+            color: #718096;
+        }
+
+        .form-hint {
+            margin-left: 135px;
+            font-size: 12px;
+            color: #A0AEC0;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-primary:hover {
+            background-color: #3182CE;
+        }
+
+        .modal-btn-danger {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-danger:hover {
+            background-color: #C53030;
+        }
+
+        .modal-btn-secondary {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: #CBD5E0;
+        }
+
+        /* 滚动条 */
+        .table-container::-webkit-scrollbar,
+        .drawer-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track,
+        .drawer-content::-webkit-scrollbar-track {
+            background: #F7FAFC;
+        }
+
+        .table-container::-webkit-scrollbar-thumb,
+        .drawer-content::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 顶部标题栏 -->
+        <div class="title-bar">
+            <div class="title-left">
+                <span class="system-title">曲轴自动检测系统 - 历史记录</span>
+                <span class="version">v1.0.0</span>
+            </div>
+            <div class="role-badge" id="roleBadge">当前角色：操作员</div>
+        </div>
+
+        <!-- 筛选区 -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <span class="filter-label">时间范围：</span>
+                    <input type="date" class="filter-input" id="filterDateStart">
+                    <span>~</span>
+                    <input type="date" class="filter-input" id="filterDateEnd">
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">曲轴型号：</span>
+                    <select class="filter-select" id="filterModel">
+                        <option value="">全部</option>
+                        <option value="DF8B">DF8B</option>
+                        <option value="HXN5B">HXN5B</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">曲轴编号：</span>
+                    <input type="text" class="filter-input" id="filterShaftId" placeholder="输入编号">
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">判定结果：</span>
+                    <select class="filter-select" id="filterResult">
+                        <option value="">全部</option>
+                        <option value="pass">合格</option>
+                        <option value="fail">不合格</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <span class="filter-label">导出状态：</span>
+                    <select class="filter-select" id="filterExported">
+                        <option value="">全部</option>
+                        <option value="yes">已导出</option>
+                        <option value="no">未导出</option>
+                    </select>
+                </div>
+                <div class="filter-buttons">
+                    <button class="filter-btn btn-query" onclick="queryRecords()">查询</button>
+                    <button class="filter-btn btn-reset" onclick="resetFilter()">重置筛选</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 管理员工具栏 -->
+        <div class="admin-toolbar" id="adminToolbar">
+            <span class="toolbar-label">已选择 <span id="selectedCount">0</span> 条记录</span>
+            <button class="toolbar-btn btn-batch-export" id="btnBatchExport" onclick="batchExport()" disabled>批量导出报表</button>
+            <button class="toolbar-btn btn-batch-delete" id="btnBatchDelete" onclick="batchDelete()" disabled>批量删除</button>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-area">
+            <!-- 表格区域 -->
+            <div class="table-area" id="tableArea">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" id="checkboxHeader">
+                                    <input type="checkbox" id="checkAll" onchange="toggleCheckAll()">
+                                </th>
+                                <th style="width: 160px;">日期时间</th>
+                                <th style="width: 100px;">型号</th>
+                                <th style="width: 140px;">曲轴编号</th>
+                                <th style="width: 100px;">检测轮次</th>
+                                <th style="width: 120px;">整体判定</th>
+                                <th style="width: 120px;">是否已导出</th>
+                                <th style="width: 100px;">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody">
+                            <!-- 动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 详情抽屉 -->
+            <div class="detail-drawer" id="detailDrawer">
+                <div class="drawer-header">
+                    <div class="drawer-title">检测详情</div>
+                    <div class="drawer-close" onclick="closeDrawer()">×</div>
+                </div>
+                <div class="drawer-content">
+                    <!-- 基本信息 -->
+                    <div class="drawer-section">
+                        <div class="section-title">基本信息</div>
+                        <div class="info-row">
+                            <span class="info-row-label">曲轴型号：</span>
+                            <span class="info-row-value" id="detailModel">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">曲轴编号：</span>
+                            <span class="info-row-value" id="detailShaftId">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">工单号：</span>
+                            <span class="info-row-value" id="detailJobNo">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">检测轮次：</span>
+                            <span class="info-row-value" id="detailRound">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">检测时间：</span>
+                            <span class="info-row-value" id="detailTime">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">操作员：</span>
+                            <span class="info-row-value" id="detailOperator">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">导出状态：</span>
+                            <span class="info-row-value" id="detailExported">-</span>
+                        </div>
+                    </div>
+
+                    <!-- 检测结果 Tab -->
+                    <div class="drawer-section">
+                        <div class="section-title">检测结果</div>
+                        <div class="drawer-tabs">
+                            <div class="drawer-tab active" data-tab="runout" onclick="switchDrawerTab('runout')">跳动量</div>
+                            <div class="drawer-tab" data-tab="roughness" onclick="switchDrawerTab('roughness')">粗糙度</div>
+                            <div class="drawer-tab" data-tab="diameter" onclick="switchDrawerTab('diameter')">直径</div>
+                        </div>
+
+                        <!-- 跳动量 -->
+                        <div class="drawer-tab-content active" id="drawer-runout">
+                            <table class="drawer-table">
+                                <thead>
+                                    <tr>
+                                        <th>轴颈</th>
+                                        <th>测量值</th>
+                                        <th>判定</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drawer-runout-tbody">
+                                    <!-- 动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 粗糙度 -->
+                        <div class="drawer-tab-content" id="drawer-roughness">
+                            <table class="drawer-table">
+                                <thead>
+                                    <tr>
+                                        <th>轴颈</th>
+                                        <th>测量值</th>
+                                        <th>判定</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drawer-roughness-tbody">
+                                    <!-- 动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 直径 -->
+                        <div class="drawer-tab-content" id="drawer-diameter">
+                            <table class="drawer-table">
+                                <thead>
+                                    <tr>
+                                        <th>轴颈</th>
+                                        <th>测量值</th>
+                                        <th>判定</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drawer-diameter-tbody">
+                                    <!-- 动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="drawer-actions">
+                    <button class="drawer-btn btn-view-report" onclick="viewFullReport()">查看完整报告</button>
+                    <button class="drawer-btn btn-delete" id="btnDeleteRecord" onclick="deleteRecord()" style="display:none;">删除记录</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部状态栏 -->
+        <div class="statusbar">
+            <div class="status-left">自检状态：<span class="status-normal">正常</span></div>
+            <div class="status-right" id="currentTime">2025-11-12 17:30:00</div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div class="success-toast" id="successToast"></div>
+
+    <!-- 导出对话框 -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-title">导出检测报表</div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label class="form-label">导出路径：</label>
+                    <input type="text" class="form-input" value="D:/检测报告/" disabled>
+                </div>
+                <div class="form-row">
+                    <label class="form-label">文件命名：</label>
+                    <input type="text" class="form-input" id="exportFileName" disabled>
+                </div>
+                <div class="form-hint">批量导出将按"型号_编号_轮次_日期"格式命名</div>
+                <div class="form-row">
+                    <label class="form-label">验证密码：</label>
+                    <input type="password" class="form-input" id="exportPassword" placeholder="请输入密码">
+                </div>
+                <div class="form-hint" id="passwordHint">请输入操作员密码</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="confirmExport()">确认导出</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal('exportModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认对话框 -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-title">确认删除</div>
+            <div class="modal-message" id="deleteMessage">确定要删除这条记录吗？此操作不可恢复。</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-danger" onclick="confirmDelete()">确认删除</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal('deleteModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 自动缩放 ====================
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        // ==================== 全局状态 ====================
+        const state = {
+            role: 'operator', // operator | admin
+            currentUser: '张三',
+            records: [],
+            filteredRecords: [],
+            selectedRecords: [],
+            currentDetailId: null
+        };
+
+        // ==================== 模拟数据 ====================
+        function generateMockData() {
+            const records = [];
+            const models = ['DF8B', 'HXN5B'];
+            const operators = ['张三', '李四', '王五'];
+            
+            for (let i = 1; i <= 50; i++) {
+                const date = new Date(2025, 10, Math.floor(Math.random() * 30) + 1, Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+                const model = models[Math.floor(Math.random() * models.length)];
+                const shaftId = `QZ${String(i).padStart(4, '0')}`;
+                const round = Math.floor(Math.random() * 3) + 1;
+                const operator = operators[Math.floor(Math.random() * operators.length)];
+                
+                // 生成测试结果
+                const runout = [];
+                const roughness = [];
+                const diameter = [];
+                let overallPass = true;
+                
+                for (let j = 1; j <= 9; j++) {
+                    const runoutValue = (Math.random() * 0.065).toFixed(3);
+                    const runoutPass = parseFloat(runoutValue) <= 0.050;
+                    runout.push({ journal: j, value: runoutValue, pass: runoutPass });
+                    if (!runoutPass) overallPass = false;
+                    
+                    const roughnessValue = (Math.random() * 2.0).toFixed(2);
+                    const roughnessPass = parseFloat(roughnessValue) <= 1.60;
+                    roughness.push({ journal: j, value: roughnessValue, pass: roughnessPass });
+                    if (!roughnessPass) overallPass = false;
+                    
+                    const diameterValue = (219.95 + Math.random() * 0.10).toFixed(3);
+                    const diameterPass = Math.abs(parseFloat(diameterValue) - 220.00) <= 0.05;
+                    diameter.push({ journal: j, value: diameterValue, pass: diameterPass });
+                    if (!diameterPass) overallPass = false;
+                }
+                
+                records.push({
+                    id: i,
+                    date: date,
+                    model: model,
+                    shaftId: shaftId,
+                    jobNo: `JOB${String(i * 10).padStart(4, '0')}`,
+                    round: round,
+                    operator: operator,
+                    overallPass: overallPass,
+                    exported: Math.random() > 0.5,
+                    status: Math.random() > 0.9 ? 'interrupted' : 'completed',
+                    results: { runout, roughness, diameter }
+                });
+            }
+            
+            return records.sort((a, b) => b.date - a.date);
+        }
+
+        // ==================== 初始化 ====================
+        function init() {
+            // 从 URL 获取角色（实际应从登录信息获取）
+            const params = new URLSearchParams(window.location.search);
+            state.role = params.get('role') || 'operator';
+            
+            // 更新角色显示
+            document.getElementById('roleBadge').textContent = `当前角色：${state.role === 'admin' ? '管理员' : '操作员'}`;
+            
+            // 管理员显示工具栏和复选框
+            if (state.role === 'admin') {
+                document.getElementById('adminToolbar').classList.add('show');
+                document.getElementById('checkboxHeader').style.display = 'table-cell';
+            } else {
+                document.getElementById('checkboxHeader').style.display = 'none';
+            }
+            
+            // 生成模拟数据
+            state.records = generateMockData();
+            state.filteredRecords = state.records;
+            
+            // 设置默认日期范围（最近7天）
+            const today = new Date();
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            document.getElementById('filterDateStart').valueAsDate = weekAgo;
+            document.getElementById('filterDateEnd').valueAsDate = today;
+            
+            // 渲染表格
+            renderTable();
+            
+            // 更新时间
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        // ==================== 渲染表格 ====================
+        function renderTable() {
+            const tbody = document.getElementById('recordsTableBody');
+            tbody.innerHTML = '';
+            
+            // 根据角色过滤数据
+            let displayRecords = state.filteredRecords;
+            if (state.role === 'operator') {
+                displayRecords = displayRecords.filter(r => r.operator === state.currentUser);
+            }
+            
+            displayRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.onclick = () => openDrawer(record.id);
+                
+                const dateStr = `${record.date.getFullYear()}-${String(record.date.getMonth()+1).padStart(2,'0')}-${String(record.date.getDate()).padStart(2,'0')} ${String(record.date.getHours()).padStart(2,'0')}:${String(record.date.getMinutes()).padStart(2,'0')}`;
+                
+                const checkboxTd = state.role === 'admin' ? `<td><input type="checkbox" onclick="event.stopPropagation(); toggleSelect(${record.id})"></td>` : '';
+                
+                row.innerHTML = `
+                    ${checkboxTd}
+                    <td>${dateStr}</td>
+                    <td>${record.model}</td>
+                    <td>${record.shaftId}</td>
+                    <td>第 ${record.round} 次</td>
+                    <td><span class="badge ${record.overallPass ? 'badge-pass' : 'badge-fail'}">${record.overallPass ? '✓ 合格' : '✗ 不合格'}</span></td>
+                    <td><span class="badge ${record.exported ? 'badge-exported' : 'badge-not-exported'}">${record.exported ? '✓ 已导出' : '未导出'}</span></td>
+                    <td><span class="badge ${record.status === 'completed' ? 'badge-completed' : 'badge-interrupted'}">${record.status === 'completed' ? '已完成' : '检测中断'}</span></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // ==================== 查询记录 ====================
+        function queryRecords() {
+            const dateStart = document.getElementById('filterDateStart').value;
+            const dateEnd = document.getElementById('filterDateEnd').value;
+            const model = document.getElementById('filterModel').value;
+            const shaftId = document.getElementById('filterShaftId').value.trim();
+            const result = document.getElementById('filterResult').value;
+            const exported = document.getElementById('filterExported').value;
+            
+            state.filteredRecords = state.records.filter(record => {
+                if (dateStart && record.date < new Date(dateStart)) return false;
+                if (dateEnd && record.date > new Date(dateEnd + ' 23:59:59')) return false;
+                if (model && record.model !== model) return false;
+                if (shaftId && !record.shaftId.includes(shaftId)) return false;
+                if (result === 'pass' && !record.overallPass) return false;
+                if (result === 'fail' && record.overallPass) return false;
+                if (exported === 'yes' && !record.exported) return false;
+                if (exported === 'no' && record.exported) return false;
+                return true;
+            });
+            
+            renderTable();
+            showToast('查询完成，共找到 ' + state.filteredRecords.length + ' 条记录');
+        }
+
+        // ==================== 重置筛选 ====================
+        function resetFilter() {
+            document.getElementById('filterDateStart').value = '';
+            document.getElementById('filterDateEnd').value = '';
+            document.getElementById('filterModel').value = '';
+            document.getElementById('filterShaftId').value = '';
+            document.getElementById('filterResult').value = '';
+            document.getElementById('filterExported').value = '';
+            
+            state.filteredRecords = state.records;
+            renderTable();
+            showToast('筛选条件已重置');
+        }
+
+        // ==================== 全选/取消全选 ====================
+        function toggleCheckAll() {
+            const checked = document.getElementById('checkAll').checked;
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+            });
+            updateSelectedCount();
+        }
+
+        // ==================== 切换选择 ====================
+        function toggleSelect(id) {
+            updateSelectedCount();
+        }
+
+        // ==================== 更新选择数量 ====================
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+            const count = checkboxes.length;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('btnBatchExport').disabled = count === 0;
+            document.getElementById('btnBatchDelete').disabled = count === 0;
+        }
+
+        // ==================== 打开抽屉 ====================
+        function openDrawer(id) {
+            const record = state.records.find(r => r.id === id);
+            if (!record) return;
+            
+            state.currentDetailId = id;
+            
+            // 更新基本信息
+            document.getElementById('detailModel').textContent = record.model;
+            document.getElementById('detailShaftId').textContent = record.shaftId;
+            document.getElementById('detailJobNo').textContent = record.jobNo;
+            document.getElementById('detailRound').textContent = `第 ${record.round} 次`;
+            const dateStr = `${record.date.getFullYear()}-${String(record.date.getMonth()+1).padStart(2,'0')}-${String(record.date.getDate()).padStart(2,'0')} ${String(record.date.getHours()).padStart(2,'0')}:${String(record.date.getMinutes()).padStart(2,'0')}:${String(record.date.getSeconds()).padStart(2,'0')}`;
+            document.getElementById('detailTime').textContent = dateStr;
+            document.getElementById('detailOperator').textContent = record.operator;
+            document.getElementById('detailExported').innerHTML = `<span class="badge ${record.exported ? 'badge-exported' : 'badge-not-exported'}">${record.exported ? '已导出' : '未导出'}</span>`;
+            
+            // 渲染检测结果
+            renderDrawerTable('runout', record.results.runout, 'mm', '≤ 0.050');
+            renderDrawerTable('roughness', record.results.roughness, 'μm', '≤ 1.60');
+            renderDrawerTable('diameter', record.results.diameter, 'mm', '220.00±0.05');
+            
+            // 管理员显示删除按钮
+            if (state.role === 'admin') {
+                document.getElementById('btnDeleteRecord').style.display = 'inline-block';
+            }
+            
+            // 打开抽屉
+            document.getElementById('detailDrawer').classList.add('open');
+            document.getElementById('tableArea').classList.add('with-drawer');
+        }
+
+        // ==================== 渲染抽屉表格 ====================
+        function renderDrawerTable(type, data, unit, standard) {
+            const tbody = document.getElementById(`drawer-${type}-tbody`);
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>轴颈 ${item.journal}</td>
+                    <td>${item.value} ${unit}</td>
+                    <td><span class="badge ${item.pass ? 'badge-pass' : 'badge-fail'}">${item.pass ? '✓ 合格' : '✗ 不合格'}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // ==================== 关闭抽屉 ====================
+        function closeDrawer() {
+            document.getElementById('detailDrawer').classList.remove('open');
+            document.getElementById('tableArea').classList.remove('with-drawer');
+            state.currentDetailId = null;
+        }
+
+        // ==================== 切换抽屉 Tab ====================
+        function switchDrawerTab(tabName) {
+            document.querySelectorAll('.drawer-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            document.querySelectorAll('.drawer-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`drawer-${tabName}`).classList.add('active');
+        }
+
+        // ==================== 查看完整报告 ====================
+        function viewFullReport() {
+            const record = state.records.find(r => r.id === state.currentDetailId);
+            if (!record) return;
+            
+            // 跳转到 P4
+            window.location.href = `P4_检测报告.html?model=${record.model}&shaft=${record.shaftId}&job=${record.jobNo}&round=${record.round}`;
+        }
+
+        // ==================== 批量导出 ====================
+        function batchExport() {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) return;
+            
+            document.getElementById('exportFileName').value = `批量导出_${checkboxes.length}条记录_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.getElementById('passwordHint').textContent = state.role === 'admin' ? '请输入管理员密码' : '请输入操作员密码';
+            document.getElementById('exportModal').classList.add('show');
+        }
+
+        // ==================== 确认导出 ====================
+        function confirmExport() {
+            const password = document.getElementById('exportPassword').value;
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+            
+            if (password.length < 4) {
+                alert('密码错误');
+                return;
+            }
+            
+            closeModal('exportModal');
+            
+            setTimeout(() => {
+                showToast('✓ 导出成功，本批次记录已标记为已导出');
+                
+                // 更新导出状态
+                const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+                updateSelectedCount();
+            }, 500);
+        }
+
+        // ==================== 批量删除 ====================
+        function batchDelete() {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) return;
+            
+            document.getElementById('deleteMessage').textContent = `确定要删除选中的 ${checkboxes.length} 条记录吗？此操作不可恢复。`;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        // ==================== 删除单条记录 ====================
+        function deleteRecord() {
+            if (!state.currentDetailId) return;
+            
+            document.getElementById('deleteMessage').textContent = '确定要删除这条记录吗？此操作不可恢复。';
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        // ==================== 确认删除 ====================
+        function confirmDelete() {
+            closeModal('deleteModal');
+            
+            setTimeout(() => {
+                if (state.currentDetailId) {
+                    // 删除单条
+                    state.records = state.records.filter(r => r.id !== state.currentDetailId);
+                    closeDrawer();
+                    showToast('✓ 记录已删除');
+                } else {
+                    // 批量删除
+                    showToast('✓ 已删除选中的记录');
+                }
+                
+                state.filteredRecords = state.records;
+                renderTable();
+            }, 300);
+        }
+
+        // ==================== 关闭模态框 ====================
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+            if (modalId === 'exportModal') {
+                document.getElementById('exportPassword').value = '';
+            }
+        }
+
+        // ==================== 显示提示 ====================
+        function showToast(message) {
+            const toast = document.getElementById('successToast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ==================== 更新时间 ====================
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('currentTime').textContent = 
+                `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // ==================== 页面加载 ====================
+        window.addEventListener('load', init);
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('detailDrawer').classList.contains('open')) {
+                    closeDrawer();
+                }
+                closeModal('exportModal');
+                closeModal('deleteModal');
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

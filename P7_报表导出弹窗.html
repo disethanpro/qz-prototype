@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P7 - 报表导出弹窗</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #E8EAED;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主窗口容器 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            background-color: #E8EAED;
+            transform-origin: center center;
+        }
+
+        /* 自动缩放 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 演示区域 */
+        .demo-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .demo-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 20px;
+        }
+
+        .demo-desc {
+            font-size: 15px;
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .demo-btn {
+            padding: 12px 40px;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 0 10px;
+        }
+
+        .btn-primary {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background-color: #3182CE;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+
+        .btn-success {
+            background-color: #48BB78;
+            color: #FFFFFF;
+        }
+
+        .btn-success:hover {
+            background-color: #38A169;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+
+        /* ========== 模态弹窗遮罩 ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* ========== 弹窗主体 ========== */
+        .export-modal {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 弹窗标题 */
+        .modal-header {
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            padding: 18px 25px;
+            font-size: 17px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: #FFFFFF;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .modal-close-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 弹窗内容 */
+        .modal-body {
+            padding: 25px;
+            max-height: calc(80vh - 150px);
+            overflow-y: auto;
+        }
+
+        /* 表单项 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2D3748;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: #E53E3E;
+        }
+
+        /* 单选框组 */
+        .radio-group {
+            display: flex;
+            gap: 25px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            font-size: 14px;
+            color: #4A5568;
+            cursor: pointer;
+        }
+
+        /* 目录选择区 */
+        .directory-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .directory-path {
+            flex: 1;
+            height: 38px;
+            padding: 0 12px;
+            font-size: 13px;
+            color: #4A5568;
+            background-color: #F7FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .directory-btn {
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: #4299E1;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .directory-btn:hover {
+            background-color: #3182CE;
+        }
+
+        /* 文件名预览 */
+        .filename-preview {
+            background-color: #F7FAFC;
+            border: 1px dashed #CBD5E0;
+            border-radius: 4px;
+            padding: 12px 15px;
+            margin-top: 8px;
+        }
+
+        .filename-example {
+            font-size: 13px;
+            color: #4A5568;
+            margin-bottom: 5px;
+            font-family: "Consolas", "Monaco", monospace;
+        }
+
+        .filename-hint {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* 密码输入框 */
+        .password-input {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px;
+            font-size: 14px;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .password-input.error {
+            border-color: #E53E3E;
+        }
+
+        .password-input.error:focus {
+            box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+        }
+
+        /* 错误提示 */
+        .error-message {
+            font-size: 12px;
+            color: #E53E3E;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* 提示信息 */
+        .info-box {
+            background-color: #EBF8FF;
+            border-left: 4px solid #4299E1;
+            padding: 12px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-box-text {
+            font-size: 13px;
+            color: #2C5282;
+            line-height: 1.6;
+        }
+
+        /* 弹窗底部按钮区 */
+        .modal-footer {
+            background-color: #F7FAFC;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        .modal-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background-color: #48BB78;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-primary:hover:not(:disabled) {
+            background-color: #38A169;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+
+        .modal-btn-primary:disabled {
+            background-color: #CBD5E0;
+            cursor: not-allowed;
+        }
+
+        .modal-btn-secondary {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: #CBD5E0;
+        }
+
+        /* 加载状态 */
+        .modal-btn-primary.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .modal-btn-primary.loading::after {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid #FFFFFF;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ========== 全局提示条 ========== */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+            z-index: 3000;
+            animation: slideDownToast 0.3s;
+        }
+
+        @keyframes slideDownToast {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        .toast.success {
+            background-color: #48BB78;
+            color: #FFFFFF;
+        }
+
+        .toast.error {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        /* 滚动条样式 */
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #F7FAFC;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #A0AEC0;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 演示区域 -->
+        <div class="demo-area">
+            <div class="demo-title">P7 - 报表导出弹窗组件</div>
+            <div class="demo-desc">此页面演示导出弹窗的交互效果，实际使用时将集成到 P4 和 P5 页面中</div>
+            
+            <div>
+                <button class="demo-btn btn-primary" onclick="openExportModal('single')">
+                    单条记录导出（来自 P4）
+                </button>
+                <button class="demo-btn btn-success" onclick="openExportModal('batch', 5)">
+                    批量导出（来自 P5）
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出弹窗 -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="export-modal">
+            <!-- 标题栏 -->
+            <div class="modal-header">
+                <span>导出检测报表</span>
+                <button class="modal-close-btn" onclick="closeExportModal()" title="关闭">×</button>
+            </div>
+
+            <!-- 内容区 -->
+            <div class="modal-body">
+                <!-- 提示信息（批量导出时显示） -->
+                <div class="info-box" id="batchInfo" style="display: none;">
+                    <div class="info-box-text" id="batchInfoText">
+                        已选中 <strong>3</strong> 条记录，将批量导出为独立文件
+                    </div>
+                </div>
+
+                <!-- 导出范围 -->
+                <div class="form-group" id="rangeGroup">
+                    <label class="form-label">导出范围</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="rangeCurrent" name="exportRange" value="current" checked>
+                            <label for="rangeCurrent">当前记录</label>
+                        </div>
+                        <div class="radio-option" id="rangeSelectedOption">
+                            <input type="radio" id="rangeSelected" name="exportRange" value="selected">
+                            <label for="rangeSelected">已勾选记录</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 导出目录 -->
+                <div class="form-group">
+                    <label class="form-label">导出目录</label>
+                    <div class="directory-selector">
+                        <div class="directory-path" id="exportDirectory">
+                            C:\Users\Public\Documents\曲轴检测报表
+                        </div>
+                        <button class="directory-btn" onclick="selectDirectory()">更改目录</button>
+                    </div>
+                </div>
+
+                <!-- 文件命名规则预览 -->
+                <div class="form-group">
+                    <label class="form-label">文件命名规则</label>
+                    <div class="filename-preview">
+                        <div class="filename-example" id="filenameExample">
+                            示例：HXN5B_QZ0003_第2轮_20251112_173045.xlsx
+                        </div>
+                        <div class="filename-hint">导出后可在目录中查看</div>
+                    </div>
+                </div>
+
+                <!-- 密码输入 -->
+                <div class="form-group">
+                    <label class="form-label required">请输入密码以确认导出</label>
+                    <input 
+                        type="password" 
+                        class="password-input" 
+                        id="exportPassword" 
+                        placeholder="操作员输入本人密码，管理员输入管理员密码"
+                        autocomplete="off">
+                    <div class="error-message" id="passwordError">
+                        密码错误，请重新输入
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部按钮区 -->
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" onclick="closeExportModal()">
+                    取消
+                </button>
+                <button class="modal-btn modal-btn-primary" id="confirmExportBtn" onclick="confirmExport()">
+                    确认导出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局提示 -->
+    <div class="toast success" id="successToast"></div>
+    <div class="toast error" id="errorToast"></div>
+
+    <script>
+        // ==================== 自动缩放 ====================
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        // ==================== 全局状态 ====================
+        const exportState = {
+            mode: 'single', // 'single' 或 'batch'
+            selectedCount: 0,
+            directory: 'C:\\Users\\Public\\Documents\\曲轴检测报表',
+            userRole: 'operator', // 'operator' 或 'admin'
+            recordData: null // 当前记录数据（用于生成文件名）
+        };
+
+        // ==================== 打开导出弹窗 ====================
+        function openExportModal(mode = 'single', selectedCount = 1, recordData = null) {
+            exportState.mode = mode;
+            exportState.selectedCount = selectedCount;
+            exportState.recordData = recordData || {
+                model: 'HXN5B',
+                shaftId: 'QZ0003',
+                round: 2,
+                datetime: '20251112_173045'
+            };
+
+            // 重置表单
+            document.getElementById('exportPassword').value = '';
+            document.getElementById('exportPassword').classList.remove('error');
+            document.getElementById('passwordError').classList.remove('show');
+
+            // 根据模式调整界面
+            if (mode === 'single') {
+                // P4 模式：仅显示当前记录
+                document.getElementById('rangeGroup').style.display = 'none';
+                document.getElementById('batchInfo').style.display = 'none';
+            } else {
+                // P5 批量模式：显示范围选择和提示
+                document.getElementById('rangeGroup').style.display = 'block';
+                document.getElementById('rangeSelected').checked = true;
+                document.getElementById('batchInfo').style.display = 'block';
+                document.getElementById('batchInfoText').innerHTML = 
+                    `已选中 <strong>${selectedCount}</strong> 条记录，将批量导出为独立文件`;
+            }
+
+            // 更新文件名示例
+            updateFilenameExample();
+
+            // 显示弹窗
+            document.getElementById('exportModal').classList.add('show');
+            document.body.style.overflow = 'hidden'; // 禁止背景滚动
+
+            // 聚焦密码输入框
+            setTimeout(() => {
+                document.getElementById('exportPassword').focus();
+            }, 300);
+        }
+
+        // ==================== 关闭导出弹窗 ====================
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.remove('show');
+            document.body.style.overflow = ''; // 恢复背景滚动
+        }
+
+        // ==================== 更新文件名示例 ====================
+        function updateFilenameExample() {
+            const data = exportState.recordData;
+            const range = document.querySelector('input[name="exportRange"]:checked')?.value || 'current';
+            
+            if (exportState.mode === 'batch' && range === 'selected') {
+                document.getElementById('filenameExample').textContent = 
+                    `示例：${data.model}_QZ0001_第1轮_20251112_100000.xlsx ... （共${exportState.selectedCount}个文件）`;
+            } else {
+                document.getElementById('filenameExample').textContent = 
+                    `示例：${data.model}_${data.shaftId}_第${data.round}轮_${data.datetime}.xlsx`;
+            }
+        }
+
+        // 监听范围选择变化
+        document.addEventListener('DOMContentLoaded', () => {
+            const rangeInputs = document.querySelectorAll('input[name="exportRange"]');
+            rangeInputs.forEach(input => {
+                input.addEventListener('change', updateFilenameExample);
+            });
+        });
+
+        // ==================== 选择目录 ====================
+        function selectDirectory() {
+            // 实际使用时应调用系统目录选择对话框
+            // 这里使用 prompt 模拟
+            const newDir = prompt('请输入导出目录路径：', exportState.directory);
+            
+            if (newDir && newDir.trim()) {
+                exportState.directory = newDir.trim();
+                document.getElementById('exportDirectory').textContent = exportState.directory;
+                
+                showToast('✓ 导出目录已更新', 'success');
+            }
+        }
+
+        // ==================== 确认导出 ====================
+        function confirmExport() {
+            const password = document.getElementById('exportPassword').value.trim();
+            const passwordInput = document.getElementById('exportPassword');
+            const passwordError = document.getElementById('passwordError');
+            const confirmBtn = document.getElementById('confirmExportBtn');
+
+            // 清除之前的错误状态
+            passwordInput.classList.remove('error');
+            passwordError.classList.remove('show');
+
+            // 验证密码
+            if (!password) {
+                passwordInput.classList.add('error');
+                passwordError.textContent = '请输入密码';
+                passwordError.classList.add('show');
+                passwordInput.focus();
+                return;
+            }
+
+            // 模拟密码验证（实际应调用后端接口）
+            if (password.length < 4) {
+                passwordInput.classList.add('error');
+                passwordError.textContent = '密码错误，请重新输入';
+                passwordError.classList.add('show');
+                passwordInput.value = '';
+                passwordInput.focus();
+                return;
+            }
+
+            // 显示加载状态
+            confirmBtn.classList.add('loading');
+            confirmBtn.disabled = true;
+
+            // 模拟导出过程
+            setTimeout(() => {
+                // 恢复按钮状态
+                confirmBtn.classList.remove('loading');
+                confirmBtn.disabled = false;
+
+                // 关闭弹窗
+                closeExportModal();
+
+                // 显示成功提示
+                setTimeout(() => {
+                    const range = document.querySelector('input[name="exportRange"]:checked')?.value || 'current';
+                    let message = '✓ 导出成功，本条记录标记为已导出';
+                    
+                    if (exportState.mode === 'batch' && range === 'selected') {
+                        message = `✓ 批量导出成功，${exportState.selectedCount} 条记录已标记为已导出`;
+                    }
+                    
+                    showToast(message, 'success');
+
+                    // 实际使用时应更新父页面的记录状态
+                    // updateRecordExportStatus();
+                }, 300);
+            }, 1500); // 模拟网络延迟
+        }
+
+        // ==================== 显示提示 ====================
+        function showToast(message, type = 'success') {
+            const toastId = type === 'success' ? 'successToast' : 'errorToast';
+            const toast = document.getElementById(toastId);
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ==================== 键盘快捷键 ====================
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('exportModal');
+            
+            if (modal.classList.contains('show')) {
+                // ESC 关闭弹窗
+                if (e.key === 'Escape') {
+                    closeExportModal();
+                }
+                
+                // Enter 确认导出
+                if (e.key === 'Enter') {
+                    confirmExport();
+                }
+            }
+        });
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('exportModal').addEventListener('click', (e) => {
+            if (e.target.id === 'exportModal') {
+                closeExportModal();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曲轴检测系统整体流程图 - 泳道版</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .mermaid {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .legend {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .legend h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin-right: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border-radius: 3px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>曲轴检测系统整体流程图</h1>
+        <div class="subtitle">带泳道区分的系统流程 - 管理员与操作员权限分离</div>
+        
+        <div class="mermaid">
+graph TB
+    subgraph 系统初始化["系统启动与开机自检"]
+        A[启动系统] --> B[开机自检<br/>传感器/机械臂/驱动电机通讯状态]
+        B --> B2{自检是否通过?}
+        B2 -->|否| B1[自检异常<br/>提示并禁止检测]
+        B2 -->|是| C[登录界面]
+        C --> D{选择角色}
+    end
+    
+    subgraph 管理员区["管理员操作区"]
+        E[管理员登录] --> E1[系统配置与维护]
+        E1 --> E1a[型号与轴颈配置]
+        E1 --> E1b[检测参数配置<br/>跳动量/粗糙度/直径]
+        E1 --> E1c[通讯配置<br/>传感器/机械臂/驱动电机]
+        E1 --> E1d[用户管理<br/>报表策略/日志]
+        E1 --> E1e[维护与标定<br/>传感器零点/标定记录/操作日志]
+        
+        E1a --> AdminComplete[配置完成]
+        E1b --> AdminComplete
+        E1c --> AdminComplete
+        E1d --> AdminComplete
+        E1e --> AdminComplete
+        
+        AdminComplete --> P_Admin[历史记录查询<br/>可查询所有记录]
+        P_Admin --> P1_Admin[筛选与查看<br/>时间/型号/曲轴号/判定/导出状态]
+        P1_Admin --> Export_Admin[批量导出报表<br/>管理员密码验证]
+        P_Admin --> Delete_Admin[删除记录<br/>管理员权限]
+    end
+    
+    subgraph 操作员区["操作员操作区"]
+        F[操作员登录] --> G[新建检测任务]
+        G --> G1[选择曲轴型号<br/>DF8B / HXN5B]
+        G1 --> G2[输入曲轴编号<br/>机车号/工单号可选]
+        G2 --> G3[确认操作员信息<br/>姓名/工号自动带出]
+        G3 --> H[准备条件确认<br/>调平/清洁/台面/环境<br/>未全部勾选则禁止开始检测]
+        H -->|未全部勾选| H
+        H -->|全部勾选| I[开始检测]
+        
+        I --> J[检测过程控制<br/>跳动量/粗糙度/换支撑板/直径<br/>支持:开始/暂停/终止]
+        J --> J1{检测中是否出现异常?}
+        J1 -->|是| J2[检测中断处理<br/>标记为检测中断并写入记录]
+        J1 -->|否| K[生成三项检测结果<br/>跳动量/粗糙度/直径]
+        K --> L[综合判定<br/>合格/不合格]
+        L --> M[结果展示<br/>三张结果表+异常摘要]
+        M --> N{是否复检本曲轴?}
+        N -->|是| G
+        N -->|否| O[保存记录]
+        
+        O --> P_Oper[历史记录查询<br/>仅可查询本人记录]
+        J2 --> P_Oper
+        P_Oper --> P1_Oper[筛选与查看<br/>时间/型号/曲轴号/判定]
+        P1_Oper --> Export_Oper[导出个人报表<br/>操作员密码验证]
+    end
+    
+    D -->|管理员| E
+    D -->|操作员| F
+    
+    style A fill:#e8f5e9,stroke:#4caf50,stroke-width:3px
+    style B fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style B1 fill:#ffebee,stroke:#f44336,stroke-width:3px
+    style B2 fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    style C fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style D fill:#f3e5f5,stroke:#9c27b0,stroke-width:3px
+    
+    style E fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style E1 fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style E1a fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    style E1b fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    style E1c fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    style E1d fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    style E1e fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
+    style AdminComplete fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    style P_Admin fill:#c5cae9,stroke:#3f51b5,stroke-width:2px
+    style P1_Admin fill:#c5cae9,stroke:#3f51b5,stroke-width:1px
+    style Export_Admin fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
+    style Delete_Admin fill:#ffccbc,stroke:#ff5722,stroke-width:2px
+    
+    style F fill:#fff8e1,stroke:#ffc107,stroke-width:2px
+    style G fill:#fff8e1,stroke:#ffc107,stroke-width:2px
+    style G1 fill:#fff8e1,stroke:#ffc107,stroke-width:1px
+    style G2 fill:#fff8e1,stroke:#ffc107,stroke-width:1px
+    style G3 fill:#fff8e1,stroke:#ffc107,stroke-width:1px
+    style H fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style I fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
+    style J fill:#b3e5fc,stroke:#03a9f4,stroke-width:2px
+    style J1 fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    style J2 fill:#ffccbc,stroke:#ff5722,stroke-width:2px
+    style K fill:#b3e5fc,stroke:#03a9f4,stroke-width:2px
+    style L fill:#c5cae9,stroke:#3f51b5,stroke-width:2px
+    style M fill:#d1c4e9,stroke:#673ab7,stroke-width:2px
+    style N fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    style O fill:#b2dfdb,stroke:#009688,stroke-width:2px
+    style P_Oper fill:#ffe0b2,stroke:#ffc107,stroke-width:2px
+    style P1_Oper fill:#ffe0b2,stroke:#ffc107,stroke-width:1px
+    style Export_Oper fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
+    
+    classDef swimlaneStyle fill:#f5f5f5,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
+    class 系统初始化,管理员区,操作员区 swimlaneStyle
+        </div>
+        
+        <div class="legend">
+            <h3>图例说明</h3>
+            <div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background:#e8eaf6;border:2px solid #3f51b5;"></span>
+                    <span>管理员专属操作</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background:#fff8e1;border:2px solid #ffc107;"></span>
+                    <span>操作员专属操作</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background:#e3f2fd;border:2px solid #2196f3;"></span>
+                    <span>系统初始化</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background:#c8e6c9;border:2px solid #4caf50;"></span>
+                    <span>关键操作节点</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background:#ffebee;border:2px solid #f44336;"></span>
+                    <span>异常/错误状态</span>
+                </div>
+            </div>
+            
+            <h3 style="margin-top:20px;">流程要点</h3>
+            <ul style="line-height:1.8;">
+                <li><strong>系统启动与自检：</strong>开机自检传感器、机械臂、驱动电机，自检不通过则禁止登录检测</li>
+                <li><strong>角色分离：</strong>使用泳道区分管理员和操作员，各自权限独立清晰</li>
+                <li><strong>准备条件：</strong>未全部勾选调平/清洁/台面/环境，则开始按钮置灰禁止检测</li>
+                <li><strong>检测流程：</strong>跳动量 → 粗糙度 → 换支撑板 → 直径测量，支持暂停/终止操作</li>
+                <li><strong>异常处理：</strong>检测中出现设备/通讯/断电异常时，标记为中断并写入记录，可后续重做</li>
+                <li><strong>复检机制：</strong>支持一键创建同曲轴新检测任务，自动带出型号和编号信息</li>
+                <li><strong>权限管理：</strong>管理员可查询所有记录并批量导出，操作员仅可查询和导出本人记录</li>
+                <li><strong>维护与标定：</strong>管理员可进行传感器零点标定，查看标定记录和操作日志</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>曲轴检测系统 | 基于 Mermaid 图表技术 | 生成时间: <span id="datetime"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // 初始化 Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 50
+            },
+            themeVariables: {
+                fontSize: '16px',
+                fontFamily: 'Microsoft YaHei, Arial, sans-serif'
+            }
+        });
+        
+        // 显示当前时间
+        document.getElementById('datetime').textContent = new Date().toLocaleString('zh-CN');
+    </script>
+</body>
+</html>

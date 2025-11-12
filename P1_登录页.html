@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P1 - 曲轴自动检测系统 - 登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主窗口容器 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform-origin: center center;
+            position: relative;
+        }
+
+        /* 自动缩放 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 背景装饰 */
+        .background-decoration {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .decoration-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .circle-1 {
+            width: 400px;
+            height: 400px;
+            top: -100px;
+            left: -100px;
+        }
+
+        .circle-2 {
+            width: 300px;
+            height: 300px;
+            bottom: -50px;
+            right: -50px;
+        }
+
+        .circle-3 {
+            width: 200px;
+            height: 200px;
+            top: 50%;
+            right: 10%;
+        }
+
+        /* 登录容器 */
+        .login-container {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 480px;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* 顶部区域 */
+        .login-header {
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            padding: 40px 30px 30px;
+            text-align: center;
+        }
+
+        .system-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFFFFF;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .system-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .system-version {
+            font-size: 13px;
+            color: #CBD5E0;
+        }
+
+        /* 登录主体 */
+        .login-body {
+            padding: 40px 40px 30px;
+        }
+
+        /* Tab 切换 */
+        .login-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .login-tab {
+            flex: 1;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #718096;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .login-tab:hover {
+            color: #4A5568;
+        }
+
+        .login-tab.active {
+            color: #2D3748;
+            border-bottom-color: #667eea;
+        }
+
+        /* 表单面板 */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 表单组 */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2D3748;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            height: 48px;
+            padding: 0 15px;
+            font-size: 15px;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            transition: all 0.3s;
+            background-color: #F7FAFC;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            background-color: #FFFFFF;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input.error,
+        .form-select.error {
+            border-color: #E53E3E;
+            background-color: #FFF5F5;
+        }
+
+        .form-input.error:focus,
+        .form-select.error:focus {
+            box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.1);
+        }
+
+        .form-select {
+            cursor: pointer;
+        }
+
+        /* 密码输入框容器 */
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #718096;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        .password-toggle:hover {
+            color: #4A5568;
+        }
+
+        /* 登录按钮 */
+        .login-btn {
+            width: 100%;
+            height: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #FFFFFF;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            background: #CBD5E0;
+            cursor: not-allowed;
+        }
+
+        .login-btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .login-btn.loading::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 3px solid #FFFFFF;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 错误提示条 */
+        .error-toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background-color: #E53E3E;
+            color: #FFFFFF;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+            z-index: 3000;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .error-toast.show {
+            display: block;
+        }
+
+        /* 底部信息 */
+        .login-footer {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid #E2E8F0;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        /* 强制修改密码弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .change-password-modal {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            width: 450px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(to bottom, #E53E3E, #C53030);
+            color: #FFFFFF;
+            padding: 20px 25px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-icon {
+            font-size: 24px;
+        }
+
+        .modal-body {
+            padding: 30px 25px;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: #4A5568;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-message strong {
+            color: #E53E3E;
+        }
+
+        .modal-footer {
+            background-color: #F7FAFC;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #E2E8F0;
+        }
+
+        .modal-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-primary:hover {
+            background-color: #C53030;
+        }
+
+        .modal-btn-primary:disabled {
+            background-color: #CBD5E0;
+            cursor: not-allowed;
+        }
+
+        /* 密码强度提示 */
+        .password-strength {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background-color: #E2E8F0;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0;
+            background-color: #CBD5E0;
+            transition: all 0.3s;
+        }
+
+        .strength-fill.weak {
+            width: 33%;
+            background-color: #E53E3E;
+        }
+
+        .strength-fill.medium {
+            width: 66%;
+            background-color: #ED8936;
+        }
+
+        .strength-fill.strong {
+            width: 100%;
+            background-color: #48BB78;
+        }
+
+        /* 版权信息 */
+        .copyright {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 背景装饰 -->
+        <div class="background-decoration">
+            <div class="decoration-circle circle-1"></div>
+            <div class="decoration-circle circle-2"></div>
+            <div class="decoration-circle circle-3"></div>
+        </div>
+
+        <!-- 登录容器 -->
+        <div class="login-container">
+            <!-- 顶部区域 -->
+            <div class="login-header">
+                <div class="system-logo">曲</div>
+                <div class="system-title">曲轴自动检测系统</div>
+                <div class="system-version">Crankshaft Automatic Detection System v1.0.0</div>
+            </div>
+
+            <!-- 登录主体 -->
+            <div class="login-body">
+                <!-- Tab 切换 -->
+                <div class="login-tabs">
+                    <div class="login-tab active" data-role="admin" onclick="switchRole('admin')">
+                        管理员登录
+                    </div>
+                    <div class="login-tab" data-role="operator" onclick="switchRole('operator')">
+                        操作员登录
+                    </div>
+                </div>
+
+                <!-- 管理员登录面板 -->
+                <div class="tab-panel active" id="adminPanel">
+                    <form onsubmit="handleLogin(event, 'admin')">
+                        <div class="form-group">
+                            <label class="form-label">管理员密码</label>
+                            <div class="password-input-wrapper">
+                                <input 
+                                    type="password" 
+                                    class="form-input" 
+                                    id="adminPassword"
+                                    placeholder="请输入管理员密码"
+                                    autocomplete="off">
+                                <span class="password-toggle" onclick="togglePassword('adminPassword')">👁</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="login-btn" id="adminLoginBtn">
+                            管理员登录
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 操作员登录面板 -->
+                <div class="tab-panel" id="operatorPanel">
+                    <form onsubmit="handleLogin(event, 'operator')">
+                        <div class="form-group">
+                            <label class="form-label">选择操作员账号</label>
+                            <select class="form-select" id="operatorAccount">
+                                <option value="">-- 请选择操作员 --</option>
+                                <option value="op001">张三 (OP001)</option>
+                                <option value="op002">李四 (OP002)</option>
+                                <option value="op003">王五 (OP003)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">操作员密码</label>
+                            <div class="password-input-wrapper">
+                                <input 
+                                    type="password" 
+                                    class="form-input" 
+                                    id="operatorPassword"
+                                    placeholder="请输入操作员密码"
+                                    autocomplete="off">
+                                <span class="password-toggle" onclick="togglePassword('operatorPassword')">👁</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="login-btn" id="operatorLoginBtn">
+                            操作员登录
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 底部信息 -->
+            <div class="login-footer">
+                请使用授权账号登录系统
+            </div>
+        </div>
+
+        <!-- 版权信息 -->
+        <div class="copyright">
+            © 2025 曲轴自动检测系统 | 工业智能检测解决方案
+        </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="error-toast" id="errorToast"></div>
+
+    <!-- 强制修改密码弹窗 -->
+    <div class="modal-overlay" id="changePasswordModal">
+        <div class="change-password-modal">
+            <div class="modal-header">
+                <span class="modal-icon">⚠️</span>
+                <span>安全提示：请修改默认密码</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-message">
+                    检测到您正在使用<strong>默认密码</strong>，为了系统安全，请立即修改密码后再继续使用。
+                </div>
+                <div class="form-group">
+                    <label class="form-label">新密码</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            class="form-input" 
+                            id="newPassword"
+                            placeholder="请输入新密码（至少8位）"
+                            autocomplete="off"
+                            oninput="checkPasswordStrength()">
+                        <span class="password-toggle" onclick="togglePassword('newPassword')">👁</span>
+                    </div>
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div class="strength-fill" id="strengthFill"></div>
+                        </div>
+                        <span id="strengthText">密码强度：弱</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">确认新密码</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            class="form-input" 
+                            id="confirmPassword"
+                            placeholder="请再次输入新密码"
+                            autocomplete="off">
+                        <span class="password-toggle" onclick="togglePassword('confirmPassword')">👁</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-primary" onclick="submitNewPassword()" id="submitPasswordBtn">
+                    确认修改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 自动缩放 ====================
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        // ==================== 全局状态 ====================
+        const loginState = {
+            isDefaultPassword: false, // 模拟：检测到默认密码
+            currentUser: null
+        };
+
+        // 模拟的用户数据库
+        const userDatabase = {
+            admin: {
+                password: 'admin123',
+                defaultPassword: 'admin123', // 默认密码
+                role: 'admin',
+                name: '系统管理员'
+            },
+            op001: {
+                password: 'op001',
+                name: '张三',
+                role: 'operator'
+            },
+            op002: {
+                password: 'op002',
+                name: '李四',
+                role: 'operator'
+            },
+            op003: {
+                password: 'op003',
+                name: '王五',
+                role: 'operator'
+            }
+        };
+
+        // ==================== 切换角色 Tab ====================
+        function switchRole(role) {
+            // 更新 Tab 激活状态
+            document.querySelectorAll('.login-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-role="${role}"]`).classList.add('active');
+
+            // 更新面板显示
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            if (role === 'admin') {
+                document.getElementById('adminPanel').classList.add('active');
+                setTimeout(() => document.getElementById('adminPassword').focus(), 100);
+            } else {
+                document.getElementById('operatorPanel').classList.add('active');
+                setTimeout(() => document.getElementById('operatorAccount').focus(), 100);
+            }
+        }
+
+        // ==================== 切换密码可见性 ====================
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const toggle = input.nextElementSibling;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                toggle.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                toggle.textContent = '👁';
+            }
+        }
+
+        // ==================== 处理登录 ====================
+        function handleLogin(event, role) {
+            event.preventDefault();
+            
+            let username, password, loginBtn;
+            
+            if (role === 'admin') {
+                username = 'admin';
+                password = document.getElementById('adminPassword').value.trim();
+                loginBtn = document.getElementById('adminLoginBtn');
+            } else {
+                username = document.getElementById('operatorAccount').value;
+                password = document.getElementById('operatorPassword').value.trim();
+                loginBtn = document.getElementById('operatorLoginBtn');
+                
+                if (!username) {
+                    showError('请选择操作员账号');
+                    document.getElementById('operatorAccount').classList.add('error');
+                    return;
+                }
+            }
+
+            if (!password) {
+                showError('请输入密码');
+                const passwordInput = document.getElementById(role === 'admin' ? 'adminPassword' : 'operatorPassword');
+                passwordInput.classList.add('error');
+                return;
+            }
+
+            // 清除错误状态
+            document.querySelectorAll('.form-input, .form-select').forEach(el => {
+                el.classList.remove('error');
+            });
+
+            // 显示加载状态
+            loginBtn.classList.add('loading');
+            loginBtn.disabled = true;
+
+            // 模拟网络请求延迟
+            setTimeout(() => {
+                const user = userDatabase[username];
+                
+                // 验证用户名和密码
+                if (!user || user.password !== password) {
+                    loginBtn.classList.remove('loading');
+                    loginBtn.disabled = false;
+                    showError('登录失败，请检查您的凭据');
+                    return;
+                }
+
+                // 登录成功
+                loginState.currentUser = user;
+
+                // 检查是否为管理员默认密码
+                if (role === 'admin' && password === user.defaultPassword) {
+                    loginBtn.classList.remove('loading');
+                    loginBtn.disabled = false;
+                    loginState.isDefaultPassword = true;
+                    showChangePasswordModal();
+                    return;
+                }
+
+                // 正常登录流程
+                loginBtn.classList.remove('loading');
+                loginBtn.disabled = false;
+                
+                // 跳转到相应页面
+                if (role === 'admin') {
+                    // 管理员跳转到 P6（系统配置）
+                    window.location.href = 'P6_系统配置.html';
+                } else {
+                    // 操作员跳转到 P2（操作员首页）
+                    window.location.href = `P2_操作员首页_新建检测任务.html?user=${username}&name=${encodeURIComponent(user.name)}`;
+                }
+            }, 1000);
+        }
+
+        // ==================== 显示错误提示 ====================
+        function showError(message) {
+            const toast = document.getElementById('errorToast');
+            toast.textContent = message;
+            toast.classList.add('show');
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ==================== 显示修改密码弹窗 ====================
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('show');
+            document.getElementById('newPassword').focus();
+        }
+
+        // ==================== 检查密码强度 ====================
+        function checkPasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            const strengthFill = document.getElementById('strengthFill');
+            const strengthText = document.getElementById('strengthText');
+
+            if (password.length === 0) {
+                strengthFill.className = 'strength-fill';
+                strengthText.textContent = '密码强度：弱';
+                return;
+            }
+
+            let strength = 0;
+            
+            // 长度检查
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            
+            // 复杂度检查
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+            if (strength <= 2) {
+                strengthFill.className = 'strength-fill weak';
+                strengthText.textContent = '密码强度：弱';
+            } else if (strength <= 4) {
+                strengthFill.className = 'strength-fill medium';
+                strengthText.textContent = '密码强度：中';
+            } else {
+                strengthFill.className = 'strength-fill strong';
+                strengthText.textContent = '密码强度：强';
+            }
+        }
+
+        // ==================== 提交新密码 ====================
+        function submitNewPassword() {
+            const newPassword = document.getElementById('newPassword').value.trim();
+            const confirmPassword = document.getElementById('confirmPassword').value.trim();
+            const submitBtn = document.getElementById('submitPasswordBtn');
+
+            // 清除错误状态
+            document.getElementById('newPassword').classList.remove('error');
+            document.getElementById('confirmPassword').classList.remove('error');
+
+            // 验证新密码
+            if (newPassword.length < 8) {
+                showError('新密码长度至少为 8 位');
+                document.getElementById('newPassword').classList.add('error');
+                return;
+            }
+
+            if (newPassword === userDatabase.admin.defaultPassword) {
+                showError('新密码不能与默认密码相同');
+                document.getElementById('newPassword').classList.add('error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showError('两次输入的密码不一致');
+                document.getElementById('confirmPassword').classList.add('error');
+                return;
+            }
+
+            // 显示加载状态
+            submitBtn.disabled = true;
+            submitBtn.textContent = '正在修改...';
+
+            // 模拟网络请求
+            setTimeout(() => {
+                // 更新密码
+                userDatabase.admin.password = newPassword;
+                
+                // 关闭弹窗
+                document.getElementById('changePasswordModal').classList.remove('show');
+                
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                submitBtn.textContent = '确认修改';
+                
+                // 清空输入
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                
+                // 跳转到管理员页面
+                setTimeout(() => {
+                    window.location.href = 'P6_系统配置.html';
+                }, 500);
+            }, 1000);
+        }
+
+        // ==================== 页面加载完成 ====================
+        window.addEventListener('load', () => {
+            // 聚焦第一个输入框
+            document.getElementById('adminPassword').focus();
+        });
+
+        // ==================== 键盘快捷键 ====================
+        document.addEventListener('keydown', (e) => {
+            // Tab 键切换角色
+            if (e.key === 'Tab' && e.shiftKey && document.activeElement.id === 'adminPassword') {
+                e.preventDefault();
+                switchRole('operator');
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

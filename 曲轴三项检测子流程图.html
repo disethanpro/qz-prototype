@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曲轴三项检测子流程图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .flowchart {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            width: 1000px;
+        }
+
+        /* 节点样式 */
+        .node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.4;
+            padding: 10px;
+            white-space: pre-line;
+        }
+
+        /* 起点/终点 - 灰色圆形 */
+        .start-end {
+            width: 140px;
+            height: 60px;
+            background-color: #9e9e9e;
+            color: white;
+            border-radius: 30px;
+        }
+
+        /* 步骤节点 - 蓝色圆角矩形 */
+        .process {
+            min-width: 200px;
+            height: 60px;
+            background-color: #42a5f5;
+            color: white;
+            border-radius: 8px;
+            padding: 10px 15px;
+        }
+
+        .process.small {
+            min-width: 180px;
+            height: 55px;
+            font-size: 13px;
+        }
+
+        /* 判断/循环节点 - 橙色菱形 */
+        .decision {
+            width: 160px;
+            height: 160px;
+            background-color: #ff9800;
+            color: white;
+            transform: rotate(45deg);
+            position: relative;
+        }
+
+        .decision-text {
+            transform: rotate(-45deg);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            width: 110px;
+            font-size: 13px;
+        }
+
+        /* 箭头 */
+        .arrow {
+            position: absolute;
+            stroke: #333;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        /* 箭头标签 */
+        .arrow-label {
+            position: absolute;
+            background-color: white;
+            padding: 2px 6px;
+            font-size: 12px;
+            color: #333;
+        }
+
+        /* 模块标题 */
+        .module-title {
+            position: absolute;
+            font-size: 16px;
+            font-weight: bold;
+            color: #1976d2;
+            left: 20px;
+        }
+
+        /* SVG 容器 */
+        #svg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>曲轴三项检测子流程图</h1>
+    
+    <div class="flowchart" style="height: 3200px;">
+        <!-- SVG 箭头定义 -->
+        <svg id="svg-container" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                </marker>
+            </defs>
+        </svg>
+
+        <!-- ========== 顶部公共部分 ========== -->
+        
+        <!-- 1. 起点 -->
+        <div class="node start-end" style="top: 20px; left: 430px;">
+            开始检测当前曲轴
+        </div>
+
+        <!-- 2. 机械臂移动 -->
+        <div class="node process" style="top: 110px; left: 400px;">
+            机械臂移动到第 1 个轴颈位置
+        </div>
+
+        <!-- ========== 模块一：跳动量检测 ========== -->
+        
+        <div class="module-title" style="top: 200px;">模块一：跳动量检测</div>
+
+        <!-- 3. 跳动量检测循环 -->
+        <div class="node process" style="top: 230px; left: 370px; min-width: 260px;">
+            跳动量检测（按轴颈循环）
+曲轴旋转，采集一圈数据，计算当前轴颈跳动量
+        </div>
+
+        <!-- 4. 判断当前轴颈是否合格 -->
+        <div class="node decision" style="top: 320px; left: 420px;">
+            <div class="decision-text">当前轴颈跳动量是否合格？</div>
+        </div>
+
+        <!-- 4.1 标记不合格 -->
+        <div class="node process small" style="top: 340px; left: 650px;">
+            标记该轴颈跳动量不合格
+（继续检测下一轴颈）
+        </div>
+
+        <!-- 4.2 标记合格 -->
+        <div class="node process small" style="top: 340px; left: 140px;">
+            标记该轴颈跳动量合格
+        </div>
+
+        <!-- 5. 判断是否还有未检测的轴颈 -->
+        <div class="node decision" style="top: 500px; left: 420px;">
+            <div class="decision-text">是否还有未检测的轴颈？</div>
+        </div>
+
+        <!-- 6. 跳动量检测完成 -->
+        <div class="node process" style="top: 670px; left: 375px; min-width: 250px;">
+            跳动量检测完成
+展示全部轴颈跳动量列表与判定
+        </div>
+
+        <!-- ========== 模块二：粗糙度检测 ========== -->
+        
+        <div class="module-title" style="top: 770px;">模块二：粗糙度检测</div>
+
+        <!-- 7. 粗糙度检测循环 -->
+        <div class="node process" style="top: 800px; left: 360px; min-width: 280px;">
+            粗糙度检测（按轴颈循环）
+使用支撑板 1 上传感器，采集 Ra，与限值比较
+        </div>
+
+        <!-- 8. 判断当前轴颈粗糙度是否合格 -->
+        <div class="node decision" style="top: 890px; left: 420px;">
+            <div class="decision-text">当前轴颈粗糙度是否合格？</div>
+        </div>
+
+        <!-- 8.1 标记粗糙度不合格 -->
+        <div class="node process small" style="top: 910px; left: 650px;">
+            标记该轴颈粗糙度不合格
+（继续检测下一轴颈）
+        </div>
+
+        <!-- 8.2 标记粗糙度合格 -->
+        <div class="node process small" style="top: 910px; left: 140px;">
+            标记该轴颈粗糙度合格
+        </div>
+
+        <!-- 9. 判断是否还有未检测的轴颈 -->
+        <div class="node decision" style="top: 1070px; left: 420px;">
+            <div class="decision-text">是否还有未检测的轴颈？</div>
+        </div>
+
+        <!-- 10. 粗糙度检测完成 -->
+        <div class="node process" style="top: 1240px; left: 375px; min-width: 250px;">
+            粗糙度检测完成
+展示全部轴颈 Ra 列表与判定
+        </div>
+
+        <!-- ========== 模块三：直径检测 ========== -->
+        
+        <div class="module-title" style="top: 1340px;">模块三：直径检测</div>
+
+        <!-- 11. 更换支撑板 2 -->
+        <div class="node process" style="top: 1370px; left: 400px;">
+            更换支撑板 2
+准备直径检测
+        </div>
+
+        <!-- 12. 直径检测循环 -->
+        <div class="node process" style="top: 1460px; left: 360px; min-width: 280px;">
+            直径检测（按轴颈循环）
+双传感器同步采集左右两点，计算直径与差值
+        </div>
+
+        <!-- 13. 判断当前轴颈直径是否合格 -->
+        <div class="node decision" style="top: 1550px; left: 420px;">
+            <div class="decision-text">当前轴颈直径是否合格？</div>
+        </div>
+
+        <!-- 13.1 标记直径不合格 -->
+        <div class="node process small" style="top: 1570px; left: 650px;">
+            标记该轴颈直径不合格
+需要复检
+        </div>
+
+        <!-- 13.2 标记直径合格 -->
+        <div class="node process small" style="top: 1570px; left: 140px;">
+            标记该轴颈直径合格
+        </div>
+
+        <!-- 14. 判断是否还有未检测的轴颈 -->
+        <div class="node decision" style="top: 1730px; left: 420px;">
+            <div class="decision-text">是否还有未检测的轴颈？</div>
+        </div>
+
+        <!-- 15. 直径检测完成 -->
+        <div class="node process" style="top: 1900px; left: 355px; min-width: 290px;">
+            直径检测完成
+展示全部轴颈左右测点、差值与判定
+        </div>
+
+        <!-- ========== 尾部汇总 ========== -->
+
+        <!-- 16. 三项检测结果汇总 -->
+        <div class="node process" style="top: 1990px; left: 365px; min-width: 270px;">
+            三项检测结果汇总
+根据三项结果，判定整根曲轴合格 / 不合格
+        </div>
+
+        <!-- 17. 终点 -->
+        <div class="node start-end" style="top: 2080px; left: 405px; width: 190px;">
+            检测结束，返回主流程结果页
+        </div>
+    </div>
+
+    <script>
+        // 绘制箭头连线
+        const svg = document.getElementById('svg-container');
+        
+        // 绘制直线箭头
+        function drawArrow(x1, y1, x2, y2) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('class', 'arrow');
+            svg.appendChild(line);
+        }
+
+        // 绘制带转折的箭头（路径）
+        function drawPath(pathData) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathData);
+            path.setAttribute('class', 'arrow');
+            svg.appendChild(path);
+        }
+
+        // 添加箭头标签
+        function addLabel(text, x, y) {
+            const label = document.createElement('div');
+            label.className = 'arrow-label';
+            label.textContent = text;
+            label.style.left = x + 'px';
+            label.style.top = y + 'px';
+            document.querySelector('.flowchart').appendChild(label);
+        }
+
+        // ========== 顶部公共部分箭头 ==========
+        
+        // 1 → 2
+        drawArrow(500, 80, 500, 110);
+
+        // 2 → 3
+        drawArrow(500, 170, 500, 230);
+
+        // ========== 模块一：跳动量检测箭头 ==========
+        
+        // 3 → 4
+        drawArrow(500, 290, 500, 320);
+
+        // 4 → 4.1（否）
+        drawPath('M 533 400 L 650 400');
+        addLabel('否', 590, 388);
+
+        // 4 → 4.2（是）
+        drawPath('M 467 400 L 320 400');
+        addLabel('是', 390, 388);
+
+        // 4.1 → 5
+        drawPath('M 730 395 L 730 580 L 533 580');
+
+        // 4.2 → 5
+        drawPath('M 220 395 L 220 580 L 467 580');
+
+        // 5 → 3（是，回到循环）
+        drawPath('M 420 580 L 320 580 L 320 260 L 370 260');
+        addLabel('是', 335, 568);
+
+        // 5 → 6（否）
+        drawArrow(500, 660, 500, 670);
+        addLabel('否', 510, 648);
+
+        // ========== 模块二：粗糙度检测箭头 ==========
+        
+        // 6 → 7
+        drawArrow(500, 730, 500, 800);
+
+        // 7 → 8
+        drawArrow(500, 860, 500, 890);
+
+        // 8 → 8.1（否）
+        drawPath('M 533 970 L 650 970');
+        addLabel('否', 590, 958);
+
+        // 8 → 8.2（是）
+        drawPath('M 467 970 L 320 970');
+        addLabel('是', 390, 958);
+
+        // 8.1 → 9
+        drawPath('M 730 965 L 730 1150 L 533 1150');
+
+        // 8.2 → 9
+        drawPath('M 220 965 L 220 1150 L 467 1150');
+
+        // 9 → 7（是，回到循环）
+        drawPath('M 420 1150 L 280 1150 L 280 830 L 360 830');
+        addLabel('是', 295, 1138);
+
+        // 9 → 10（否）
+        drawArrow(500, 1230, 500, 1240);
+        addLabel('否', 510, 1218);
+
+        // ========== 模块三：直径检测箭头 ==========
+        
+        // 10 → 11
+        drawArrow(500, 1300, 500, 1370);
+
+        // 11 → 12
+        drawArrow(500, 1430, 500, 1460);
+
+        // 12 → 13
+        drawArrow(500, 1520, 500, 1550);
+
+        // 13 → 13.1（否）
+        drawPath('M 533 1630 L 650 1630');
+        addLabel('否', 590, 1618);
+
+        // 13 → 13.2（是）
+        drawPath('M 467 1630 L 320 1630');
+        addLabel('是', 390, 1618);
+
+        // 13.1 → 14
+        drawPath('M 730 1625 L 730 1810 L 533 1810');
+
+        // 13.2 → 14
+        drawPath('M 220 1625 L 220 1810 L 467 1810');
+
+        // 14 → 12（是，回到循环）
+        drawPath('M 420 1810 L 280 1810 L 280 1490 L 360 1490');
+        addLabel('是', 295, 1798);
+
+        // 14 → 15（否）
+        drawArrow(500, 1890, 500, 1900);
+        addLabel('否', 510, 1878);
+
+        // ========== 尾部汇总箭头 ==========
+        
+        // 15 → 16
+        drawArrow(500, 1960, 500, 1990);
+
+        // 16 → 17
+        drawArrow(500, 2050, 500, 2080);
+    </script>
+</body>
+</html>
+
+
+
+

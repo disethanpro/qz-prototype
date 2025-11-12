@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>曲轴自动检测系统整体流程图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .container {
+            position: relative;
+            margin: 0 auto;
+            min-width: 1800px;
+            min-height: 3400px;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #1565C0;
+            margin-bottom: 50px;
+            padding: 20px;
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            border-radius: 12px;
+            border: 3px solid #2196F3;
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+        }
+
+        /* 节点基础样式 */
+        .node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 15px 20px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+            z-index: 2;
+        }
+
+        /* 起点/终点 - 圆形 */
+        .node-start, .node-end {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #757575 0%, #9e9e9e 100%);
+            color: white;
+            font-weight: bold;
+            border: 3px solid #424242;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            font-size: 14px;
+        }
+
+        /* 普通步骤 - 蓝色圆角矩形 */
+        .node-step {
+            min-width: 240px;
+            max-width: 320px;
+            min-height: 90px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+            border: 2px solid #1565C0;
+            padding: 15px 20px;
+            box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        /* 判断节点 - 橙色菱形 */
+        .node-decision {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #FFB74D 0%, #FF9800 100%);
+            color: white;
+            font-weight: bold;
+            border: 3px solid #F57C00;
+            transform: rotate(45deg);
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+
+        .node-decision .text {
+            transform: rotate(-45deg);
+            width: 160px;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        /* 连线 */
+        .arrow {
+            position: absolute;
+            background: #333;
+            z-index: 1;
+        }
+
+        .arrow-horizontal {
+            height: 2px;
+        }
+
+        .arrow-vertical {
+            width: 2px;
+        }
+
+        /* 箭头头部 */
+        .arrow-head {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .arrow-head-down {
+            border-width: 10px 6px 0 6px;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .arrow-head-up {
+            border-width: 0 6px 10px 6px;
+            border-color: transparent transparent #333 transparent;
+        }
+
+        .arrow-head-right {
+            border-width: 6px 0 6px 10px;
+            border-color: transparent transparent transparent #333;
+        }
+
+        .arrow-head-left {
+            border-width: 6px 10px 6px 0;
+            border-color: transparent #333 transparent transparent;
+        }
+
+        /* 标签 */
+        .label {
+            position: absolute;
+            font-size: 12px;
+            color: #666;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            z-index: 3;
+        }
+
+        /* 泳道标题 */
+        .lane-title {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            color: #1976D2;
+            top: 220px;
+            padding: 8px 16px;
+            background: #E3F2FD;
+            border-radius: 8px;
+            border: 2px solid #2196F3;
+        }
+
+        .lane-admin {
+            left: 180px;
+        }
+
+        .lane-operator {
+            right: 180px;
+        }
+        
+        /* 分隔线 */
+        .lane-separator {
+            position: absolute;
+            left: 50%;
+            top: 280px;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, #E0E0E0 0%, #BDBDBD 100%);
+            z-index: 0;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 增加提示信息样式 */
+        .info-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 12px;
+            color: #666;
+            z-index: 100;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .info-box strong {
+            color: #1976D2;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">曲轴自动检测系统整体流程图</div>
+
+        <!-- 泳道分隔线 -->
+        <div class="lane-separator"></div>
+
+        <!-- 泳道标题 -->
+        <div class="lane-title lane-admin">👨‍💼 管理员流程</div>
+        <div class="lane-title lane-operator">👷 操作员流程</div>
+
+        <!-- 起点 -->
+        <div class="node node-start" style="left: 50%; top: 50px; transform: translateX(-50%);">
+            系统启动<br>(Windows 单机<br>前后端一体)
+        </div>
+
+        <!-- 登录入口 -->
+        <div class="node node-step" style="left: 50%; top: 230px; transform: translateX(-50%);">
+            显示登录入口<br>管理员登录 / 操作员登录
+        </div>
+
+        <!-- 身份选择判断 -->
+        <div class="node node-decision" style="left: 50%; top: 370px; transform: translateX(-50%) rotate(45deg);">
+            <div class="text">用户选择<br>登录身份？</div>
+        </div>
+
+        <!-- ========== 左侧：管理员流程 ========== -->
+
+        <!-- 管理员登录 -->
+        <div class="node node-step" style="left: 120px; top: 600px;">
+            <strong>管理员登录</strong><br>
+            · 输入账号 + 默认密码<br>
+            · 首次登录强制修改默认密码
+        </div>
+
+        <!-- 管理员首页 -->
+        <div class="node node-step" style="left: 100px; top: 780px;">
+            <strong>管理员首页</strong><br>
+            <strong>(系统与权限)</strong><br>
+            · 可查看全部检测流程<br>
+            · 可查看所有人历史记录<br>
+            · 可进入系统配置、用户管理<br>
+            · 通讯配置、报表导出<br>
+            · 维护与标定
+        </div>
+
+        <!-- 型号与检测方案管理 -->
+        <div class="node node-step" style="left: 80px; top: 1020px;">
+            <strong>型号与检测方案管理</strong><br>
+            <strong>(模块 2)</strong><br>
+            · 预置 DF8B / HXN5B<br>
+            · 配置轴颈数量、编号<br>
+            · 配置跳动量限值<br>
+            · 配置粗糙度 Ra 限值<br>
+            · 配置直径标称尺寸、公差<br>
+            · 配置左右差值限值<br>
+            · 质量不合格时：仅标记<br>
+            &nbsp;&nbsp;不合格，继续检测
+        </div>
+
+        <!-- 通讯配置与开机自检 -->
+        <div class="node node-step" style="left: 90px; top: 1310px;">
+            <strong>通讯配置与开机自检</strong><br>
+            <strong>(模块 3)</strong><br>
+            · 配置三路传感器<br>
+            &nbsp;&nbsp;串口/波特率/地址<br>
+            · 配置机械臂、驱动电机通讯<br>
+            · 开机自检：任一异常 →<br>
+            &nbsp;&nbsp;禁止开始检测
+        </div>
+
+        <!-- 历史记录与报表管理 -->
+        <div class="node node-step" style="left: 80px; top: 1550px;">
+            <strong>历史记录与报表管理</strong><br>
+            <strong>(模块 11 + 12)</strong><br>
+            · 按时间、型号、编号、结果筛选<br>
+            · 查看任意记录详情<br>
+            · 批量导出报表 (Excel)<br>
+            · 需管理员密码<br>
+            · 导出成功标记为"已导出"
+        </div>
+
+        <!-- 维护与日志 -->
+        <div class="node node-step" style="left: 90px; top: 1800px;">
+            <strong>维护与日志</strong><br>
+            <strong>(模块 13)</strong><br>
+            · 执行各类传感器<br>
+            &nbsp;&nbsp;零点/标定操作<br>
+            · 保存标定时间、传感器类型<br>
+            · 记录参数修改、记录删除<br>
+            · 报表导出等操作日志
+        </div>
+
+        <!-- 管理员终点 -->
+        <div class="node node-end" style="left: 200px; top: 2030px;">
+            管理员操作结束<br>/<br>退出登录
+        </div>
+
+        <!-- ========== 右侧：操作员流程 ========== -->
+
+        <!-- 操作员登录 -->
+        <div class="node node-step" style="right: 120px; top: 600px;">
+            <strong>操作员登录</strong><br>
+            · 从列表中选择姓名<br>
+            · 输入密码登录<br>
+            · 登录后进入检测主界面
+        </div>
+
+        <!-- 新建检测任务与准备条件 -->
+        <div class="node node-step" id="new-task" style="right: 80px; top: 780px;">
+            <strong>新建检测任务与准备条件</strong><br>
+            <strong>(模块 4)</strong><br>
+            · 选择曲轴型号：DF8B/HXN5B<br>
+            · 输入曲轴编号、机车号/工单号<br>
+            · 显示当前操作员姓名/工号<br>
+            · 默认启用全部检测项目<br>
+            · 勾选准备条件：<br>
+            &nbsp;&nbsp;✓ 曲轴已调平<br>
+            &nbsp;&nbsp;✓ 曲轴表面干净，无油迹/灰尘<br>
+            &nbsp;&nbsp;✓ 操作台无异物<br>
+            &nbsp;&nbsp;✓ 工作环境安全<br>
+            · 未全部勾选禁止开始检测
+        </div>
+
+        <!-- 检测过程控制 -->
+        <div class="node node-step" style="right: 80px; top: 1060px;">
+            <strong>检测过程控制</strong><br>
+            <strong>(模块 5)</strong><br>
+            · 按顺序执行：跳动量 → 粗糙度<br>
+            &nbsp;&nbsp;→ 更换支撑板 → 直径<br>
+            · 支持开始/暂停/终止本件<br>
+            · 实时显示当前项目、轴颈<br>
+            &nbsp;&nbsp;编号、进度<br>
+            · 设备异常处理：<br>
+            &nbsp;&nbsp;机械臂报警/急停/越界 → 停止<br>
+            &nbsp;&nbsp;传感器通讯中断 → 停止并提示<br>
+            &nbsp;&nbsp;断电/程序异常 → 保存为<br>
+            &nbsp;&nbsp;"检测中断"<br>
+            · 质量不合格时：弹窗提示<br>
+            &nbsp;&nbsp;但按策略继续检测
+        </div>
+
+        <!-- 跳动量检测模块 -->
+        <div class="node node-step" style="right: 80px; top: 1350px;">
+            <strong>跳动量检测模块</strong><br>
+            <strong>(模块 6)</strong><br>
+            · DF8B：9个轴颈；HXN5B：7个<br>
+            · 曲轴旋转，实时采集跳动量<br>
+            · 旋转3秒后取基准点<br>
+            · 按0.01间隔采样<br>
+            · 其它点减基准点的最大绝对值<br>
+            &nbsp;&nbsp;= 跳动量<br>
+            · 与限值比较，得出合格/不合格<br>
+            · 显示当前轴颈、跳动量值<br>
+            · 显示状态指示灯与结果表
+        </div>
+
+        <!-- 粗糙度检测模块 -->
+        <div class="node node-step" style="right: 90px; top: 1630px;">
+            <strong>粗糙度检测模块</strong><br>
+            <strong>(模块 7)</strong><br>
+            · 使用支撑板1上的粗糙度传感器<br>
+            · 每轴颈采集 1 个 Ra 值<br>
+            · 曲轴旋转过程中计算 Ra (μm)<br>
+            · 与限值 Ra ≤ 0.25 μm 比较<br>
+            · 显示当前轴颈 Ra 值与判定<br>
+            · 显示所有轴颈 Ra 列表与判定
+        </div>
+
+        <!-- 更换支撑板并执行直径检测 -->
+        <div class="node node-step" style="right: 70px; top: 1880px;">
+            <strong>更换支撑板并执行直径检测</strong><br>
+            <strong>(模块 8)</strong><br>
+            · 人工更换支撑板2，确认后继续<br>
+            · 每轴颈测量2个位置<br>
+            &nbsp;&nbsp;(传感器1 / 传感器2)<br>
+            · 先测位置做 -50 偏移，设置 0 点<br>
+            · 取两个数值相加的绝对值<br>
+            · 与标准直径和公差比较<br>
+            · 超出公差 → 不合格<br>
+            · 显示编号、传感器1、传感器2<br>
+            &nbsp;&nbsp;差值、判定状态<br>
+            · 任意轴颈不合格 → 本件不合格<br>
+            &nbsp;&nbsp;建议复检
+        </div>
+
+        <!-- 检测结果展示 -->
+        <div class="node node-step" style="right: 90px; top: 2170px;">
+            <strong>检测结果展示</strong><br>
+            <strong>(模块 9)</strong><br>
+            · 综合三项结果，判定整根曲轴<br>
+            &nbsp;&nbsp;"合格 / 不合格"<br>
+            · 分项结果表：跳动量/粗糙度/直径<br>
+            · 不合格单元格红色高亮<br>
+            · 异常摘要：列出所有不合格<br>
+            &nbsp;&nbsp;轴颈与项目<br>
+            · 按钮：复检本曲轴 /<br>
+            &nbsp;&nbsp;保存并返回首页 / 导出报表
+        </div>
+
+        <!-- 是否需要再次检测 -->
+        <div class="node node-decision" style="right: 140px; top: 2430px; transform: translateX(50%) rotate(45deg);">
+            <div class="text">是否需要<br>再次检测？<br>(模块 10)</div>
+        </div>
+
+        <!-- 历史记录与查询 -->
+        <div class="node node-step" style="right: 90px; top: 2680px;">
+            <strong>历史记录与查询</strong><br>
+            <strong>(模块 11)</strong><br>
+            · 操作员仅查看本人记录<br>
+            · 按时间、型号、编号、结果<br>
+            &nbsp;&nbsp;导出状态筛选<br>
+            · 查看记录详情<br>
+            &nbsp;&nbsp;(与结果展示页一致，只读)
+        </div>
+
+        <!-- 个人报表导出 -->
+        <div class="node node-step" style="right: 90px; top: 2920px;">
+            <strong>个人报表导出</strong><br>
+            <strong>(模块 12)</strong><br>
+            · 在结果详情或历史记录中<br>
+            &nbsp;&nbsp;选择记录<br>
+            · 输入操作员密码确认导出<br>
+            · 按 Excel 模板生成报表<br>
+            · 文件名含型号、编号、日期时间<br>
+            · 导出成功标记为"已导出"
+        </div>
+
+        <!-- 操作员终点 -->
+        <div class="node node-end" style="right: 190px; top: 3150px;">
+            操作员操作结束<br>/<br>退出登录
+        </div>
+
+        <!-- ========== 连线与箭头 ========== -->
+
+        <!-- 起点到登录入口 -->
+        <div class="arrow arrow-vertical" style="left: 50%; top: 120px; height: 110px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 50%; top: 226px; transform: translateX(-50%);"></div>
+
+        <!-- 登录入口到身份判断 -->
+        <div class="arrow arrow-vertical" style="left: 50%; top: 290px; height: 50px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 50%; top: 336px; transform: translateX(-50%);"></div>
+
+        <!-- 身份判断到管理员登录 -->
+        <div class="arrow arrow-horizontal" style="left: 270px; top: 450px; width: 90px;"></div>
+        <div class="arrow arrow-vertical" style="left: 270px; top: 450px; height: 150px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 596px;"></div>
+        <div class="label" style="left: 280px; top: 420px;">管理员</div>
+
+        <!-- 身份判断到操作员登录 -->
+        <div class="arrow arrow-horizontal" style="right: 270px; top: 450px; width: 530px;"></div>
+        <div class="arrow arrow-vertical" style="right: 270px; top: 450px; height: 150px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 596px;"></div>
+        <div class="label" style="right: 790px; top: 420px;">操作员</div>
+
+        <!-- 管理员流程连线 -->
+        <div class="arrow arrow-vertical" style="left: 270px; top: 690px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 776px;"></div>
+
+        <div class="arrow arrow-vertical" style="left: 270px; top: 930px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 1016px;"></div>
+
+        <div class="arrow arrow-vertical" style="left: 270px; top: 1220px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 1306px;"></div>
+
+        <div class="arrow arrow-vertical" style="left: 270px; top: 1460px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 1546px;"></div>
+
+        <div class="arrow arrow-vertical" style="left: 270px; top: 1700px; height: 100px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 1796px;"></div>
+
+        <div class="arrow arrow-vertical" style="left: 270px; top: 1940px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="left: 264px; top: 2026px;"></div>
+
+        <!-- 操作员流程连线 -->
+        <div class="arrow arrow-vertical" style="right: 270px; top: 690px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 776px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 990px; height: 70px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 1056px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 1240px; height: 110px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 1346px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 1540px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 1626px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 1780px; height: 100px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 1876px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 2080px; height: 90px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 2166px;"></div>
+
+        <div class="arrow arrow-vertical" style="right: 270px; top: 2330px; height: 70px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 2396px;"></div>
+
+        <!-- 判断节点到历史记录 -->
+        <div class="arrow arrow-vertical" style="right: 270px; top: 2540px; height: 140px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 2676px;"></div>
+        <div class="label" style="right: 240px; top: 2590px;">否</div>
+
+        <!-- 历史记录到报表导出 -->
+        <div class="arrow arrow-vertical" style="right: 270px; top: 2810px; height: 110px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 2916px;"></div>
+
+        <!-- 报表导出到操作员终点 -->
+        <div class="arrow arrow-vertical" style="right: 270px; top: 3050px; height: 100px;"></div>
+        <div class="arrow-head arrow-head-down" style="right: 276px; top: 3146px;"></div>
+
+        <!-- 判断节点回到新建任务（复检） -->
+        <div class="arrow arrow-horizontal" style="right: 360px; top: 2510px; width: 280px;"></div>
+        <div class="arrow arrow-vertical" style="right: 640px; top: 880px; height: 1630px;"></div>
+        <div class="arrow arrow-horizontal" style="right: 410px; top: 880px; width: 230px;"></div>
+        <div class="arrow-head arrow-head-left" style="right: 414px; top: 874px;"></div>
+        <div class="label" style="right: 400px; top: 2480px; background: #fff9c4; color: #f57f17; font-weight: bold;">是 (复检)</div>
+
+    </div>
+
+    <!-- 信息提示框 -->
+    <div class="info-box">
+        <strong>💡 图例说明</strong>
+        🔵 蓝色圆角矩形 = 功能步骤<br>
+        🟠 橙色菱形 = 判断节点<br>
+        ⚫ 灰色圆形 = 起点/终点<br>
+        ➡️ 黑色箭头 = 流程方向
+    </div>
+
+    <script>
+        // 可以在这里添加一些交互功能，比如节点高亮、缩放等
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('曲轴自动检测系统流程图加载完成');
+            
+            // 为节点添加鼠标悬停效果
+            const nodes = document.querySelectorAll('.node');
+            nodes.forEach(node => {
+                node.addEventListener('mouseenter', function() {
+                    const currentTransform = this.style.transform || '';
+                    if (this.classList.contains('node-decision')) {
+                        // 菱形节点特殊处理
+                        const match = currentTransform.match(/rotate\([^)]+\)/);
+                        const rotation = match ? match[0] : 'rotate(45deg)';
+                        this.style.transform = rotation + ' scale(1.08)';
+                    } else {
+                        this.style.transform = currentTransform.includes('translateX') 
+                            ? currentTransform + ' scale(1.05)' 
+                            : 'scale(1.05)';
+                    }
+                    this.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+                    this.style.zIndex = '10';
+                });
+                
+                node.addEventListener('mouseleave', function() {
+                    const currentTransform = this.style.transform || '';
+                    if (this.classList.contains('node-decision')) {
+                        this.style.transform = currentTransform.replace(' scale(1.08)', '');
+                    } else {
+                        this.style.transform = currentTransform.replace(' scale(1.05)', '');
+                    }
+                    
+                    // 恢复原始阴影
+                    if (this.classList.contains('node-step')) {
+                        this.style.boxShadow = '0 3px 10px rgba(33, 150, 243, 0.3)';
+                    } else if (this.classList.contains('node-decision')) {
+                        this.style.boxShadow = '0 4px 12px rgba(255, 152, 0, 0.4)';
+                    } else {
+                        this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
+                    }
+                    this.style.zIndex = '2';
+                });
+            });
+            
+            // 添加双击节点滚动到对应位置的功能
+            nodes.forEach(node => {
+                node.addEventListener('dblclick', function() {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

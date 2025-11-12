@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2 - 检测准备页（融合版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #E8EAED;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 异常闪烁动画 */
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.3; }
+        }
+
+        .status-error {
+            color: #E53E3E;
+            animation: blink 1.5s infinite;
+            font-weight: bold;
+        }
+
+        /* 主窗口容器 - 固定比例 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            background-color: #E8EAED;
+            transform-origin: center center;
+        }
+
+        /* 自动缩放以适配屏幕 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 顶部标题栏 */
+        .title-bar {
+            height: 50px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .title-left {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .system-title {
+            font-size: 16px;
+            font-weight: normal;
+            color: #FFFFFF;
+        }
+
+        .version {
+            font-size: 11px;
+            color: #A0AEC0;
+        }
+
+        .title-right {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            font-size: 13px;
+        }
+
+        .user-info {
+            color: #FFFFFF;
+        }
+
+        .top-btn {
+            padding: 5px 15px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: normal;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .top-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 主内容区 */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 30px;
+            overflow-y: auto;
+        }
+
+        /* 主操作面板 */
+        .main-panel {
+            background-color: #FFFFFF;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        /* 表单区域 */
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            width: 140px;
+            font-size: 14px;
+            color: #2D3748;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: #E53E3E;
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 400px;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 14px;
+            border: 1px solid #CBD5E0;
+            border-radius: 3px;
+            background-color: #FFFFFF;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .form-control:disabled {
+            background-color: #EDF2F7;
+            color: #718096;
+            border-color: #E2E8F0;
+        }
+
+        select.form-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8"><path fill="%23718096" d="M6 8L0 0h12z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 35px;
+        }
+
+        /* 准备条件确认区域 */
+        .confirm-section {
+            background-color: #FFFBEB;
+            border: 1px solid #F6AD55;
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+        }
+
+        .confirm-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 15px;
+        }
+
+        /* 状态提示栏 */
+        .status-hint {
+            background-color: #FFF5E6;
+            border: 1px solid #FFD699;
+            border-radius: 4px;
+            padding: 10px 15px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-hint-icon {
+            font-size: 16px;
+            color: #ED8936;
+        }
+
+        .status-hint-text {
+            font-size: 12px;
+            color: #975A16;
+            font-style: normal;
+        }
+
+        .status-hint.ready {
+            background-color: #E6FFFA;
+            border-color: #81E6D9;
+        }
+
+        .status-hint.ready .status-hint-icon {
+            color: #38B2AC;
+        }
+
+        .status-hint.ready .status-hint-text {
+            color: #234E52;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-row:last-of-type {
+            margin-bottom: 10px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+            accent-color: #9F7AEA;
+        }
+
+        .checkbox-row label {
+            font-size: 14px;
+            color: #2D3748;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hint-text {
+            font-size: 12px;
+            color: #A0AEC0;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* 操作按钮区域 */
+        .button-area {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            padding: 10px 28px;
+            height: 42px;
+        }
+
+        .btn-secondary {
+            background-color: #A0AEC0;
+            color: #FFFFFF;
+        }
+
+        .btn-secondary:hover {
+            background-color: #718096;
+        }
+
+        .btn-primary {
+            background-color: #48BB78;
+            color: #FFFFFF;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #38A169;
+        }
+
+        .btn-primary:disabled {
+            background-color: #E2E8F0;
+            color: #A0AEC0;
+            cursor: not-allowed;
+        }
+
+        /* 底部检测记录区域 */
+        .records-panel {
+            background-color: #FFFFFF;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+            padding: 20px 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .records-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2D3748;
+        }
+
+        .records-filter {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            color: #4A5568;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .radio-item input[type="radio"] {
+            margin-right: 5px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: #9F7AEA;
+        }
+
+        .radio-item label {
+            font-size: 13px;
+            color: #2D3748;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 表格 */
+        .table-container {
+            overflow-y: auto;
+            max-height: 180px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: #F7FAFC;
+            z-index: 10;
+        }
+
+        th {
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: left;
+            color: #4A5568;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #EDF2F7;
+            transition: background-color 0.15s;
+        }
+
+        tbody tr:hover {
+            background-color: #F7FAFC;
+            cursor: pointer;
+        }
+
+        td {
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #2D3748;
+        }
+
+        .status-pass {
+            color: #38A169;
+            font-weight: 600;
+        }
+
+        .status-fail {
+            color: #E53E3E;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            color: #4A5568;
+        }
+
+        .status-interrupted {
+            color: #DD6B20;
+            font-weight: 600;
+        }
+
+        /* 底部状态栏（增强版 - 融合 P3 监控功能） */
+        .statusbar {
+            height: 36px;
+            background: linear-gradient(to bottom, #2D3748, #1A202C);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+            font-size: 12px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 100;
+        }
+
+        .status-left {
+            flex: 2;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-center {
+            flex: 3;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .status-right {
+            flex: 2;
+            text-align: right;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-label {
+            color: #A0AEC0;
+            font-size: 11px;
+        }
+
+        .status-value {
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        .status-normal {
+            color: #68D391;
+            font-weight: bold;
+        }
+
+        .status-warning {
+            color: #F6AD55;
+            font-weight: bold;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-dot.green {
+            background-color: #68D391;
+            box-shadow: 0 0 8px #68D391;
+        }
+
+        .status-dot.red {
+            background-color: #FC8181;
+            box-shadow: 0 0 8px #FC8181;
+            animation: blink 1.5s infinite;
+        }
+
+        .status-dot.yellow {
+            background-color: #F6AD55;
+            box-shadow: 0 0 8px #F6AD55;
+        }
+
+        /* 曲轴状态可点击样式（管理员专用） */
+        .crankshaft-status {
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+
+        .crankshaft-status:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 滚动条样式 */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #F7FAFC;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #A0AEC0;
+        }
+
+        .content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: #EDF2F7;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+
+        /* 右键菜单 */
+        .context-menu {
+            position: fixed;
+            background-color: #FFFFFF;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            min-width: 160px;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #2D3748;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        .context-menu-item:hover {
+            background-color: #EDF2F7;
+        }
+
+        .context-menu-item:first-child {
+            border-radius: 4px 4px 0 0;
+        }
+
+        .context-menu-item:last-child {
+            border-radius: 0 0 4px 4px;
+        }
+
+        /* 开发测试按钮（生产环境应移除） */
+        .dev-test-btn {
+            position: fixed;
+            bottom: 50px;
+            right: 30px;
+            padding: 8px 16px;
+            background-color: #E53E3E;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .dev-test-btn:hover {
+            background-color: #C53030;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 顶部标题栏 -->
+        <div class="title-bar">
+            <div class="title-left">
+                <span class="system-title">曲轴自动检测系统</span>
+                <span class="version">v1.0.0</span>
+            </div>
+            <div class="title-right">
+                <span class="user-info">操作员：张三 (OP20231105)</span>
+                <button class="top-btn" onclick="viewHistory()" title="查看历史记录">历史记录</button>
+                <button class="top-btn" onclick="logout()" title="退出登录">退出</button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-area">
+            <!-- 主操作面板 -->
+            <div class="main-panel">
+                <div class="panel-title">新建检测任务</div>
+                
+                <!-- 表单区域 -->
+                <div class="form-section">
+                    <div class="form-row">
+                        <label class="form-label required">曲轴型号：</label>
+                        <select class="form-control" id="crankshaftModel">
+                            <option value="HXN5B">HXN5B</option>
+                            <option value="DF8B">DF8B</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label required">曲轴编号：</label>
+                        <input type="text" class="form-control" id="crankshaftNo" placeholder="99" value="99">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">机车号 / 工单号：</label>
+                        <input type="text" class="form-control" id="workOrder" placeholder="88" value="88">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">操作员：</label>
+                        <input type="text" class="form-control" value="张三 (OP20231105)" disabled>
+                    </div>
+                </div>
+
+                <!-- 准备条件确认区域 -->
+                <div class="confirm-section">
+                    <div class="confirm-title">准备条件确认</div>
+                    
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="check1" checked onchange="checkAllConditions()">
+                        <label for="check1">曲轴已调平</label>
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="check2" checked onchange="checkAllConditions()">
+                        <label for="check2">曲轴表面干净，无油迹/灰尘</label>
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="check3" checked onchange="checkAllConditions()">
+                        <label for="check3">操作台上无异物</label>
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="check4" checked onchange="checkAllConditions()">
+                        <label for="check4">工作环境安全（防护设施就位）</label>
+                    </div>
+
+                    <!-- 状态提示栏 -->
+                    <div class="status-hint ready" id="statusHint">
+                        <span class="status-hint-icon">✓</span>
+                        <span class="status-hint-text" id="statusHintText">所有准备条件已满足，可以开始检测</span>
+                    </div>
+                </div>
+
+                <!-- 操作按钮区域 -->
+                <div class="button-area">
+                    <button class="btn btn-secondary" onclick="resetForm()">重置表单</button>
+                    <button class="btn btn-primary" id="startBtn" onclick="startDetection()">开始检测</button>
+                </div>
+            </div>
+
+            <!-- 底部检测记录区域 -->
+            <div class="records-panel">
+                <div class="records-header">
+                    <div class="records-title">最近检测记录（当前操作员）</div>
+                    <div class="records-filter">
+                        <span class="filter-label">日期范围：</span>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="dateRange" id="today" checked>
+                                <label for="today">当天</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="dateRange" id="threeDays">
+                                <label for="threeDays">三天内</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="dateRange" id="oneWeek">
+                                <label for="oneWeek">一周内</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 表格容器 -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">时间</th>
+                                <th style="width: 120px;">型号</th>
+                                <th style="width: 150px;">曲轴编号</th>
+                                <th style="width: 120px;">轮次</th>
+                                <th style="width: 120px;">整体判定</th>
+                                <th style="width: 120px;">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody">
+                            <tr data-status="completed">
+                                <td>11-12 09:30</td>
+                                <td>DF8B</td>
+                                <td>QZ0001</td>
+                                <td>第 1 次</td>
+                                <td class="status-pass">合格</td>
+                                <td class="status-completed">已完成</td>
+                            </tr>
+                            <tr data-status="completed">
+                                <td>11-12 08:15</td>
+                                <td>HXN5B</td>
+                                <td>QZ0002</td>
+                                <td>第 2 次</td>
+                                <td class="status-fail">不合格</td>
+                                <td class="status-completed">已完成</td>
+                            </tr>
+                            <tr data-status="interrupted">
+                                <td>11-11 16:45</td>
+                                <td>DF8B</td>
+                                <td>QZ0003</td>
+                                <td>第 1 次</td>
+                                <td class="status-interrupted">检测中断</td>
+                                <td class="status-interrupted">检测中断</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部状态栏（增强版 - 融合实时监控） -->
+        <div class="statusbar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span class="status-dot green" id="selfCheckDot"></span>
+                    <span class="status-label">自检：</span>
+                    <span class="status-normal" id="selfCheckStatus">正常</span>
+                </div>
+            </div>
+            <div class="status-center">
+                <div class="status-item crankshaft-status" onclick="toggleCrankshaftDetail()" title="点击查看详情（仅管理员）">
+                    <span class="status-dot green" id="crankshaftDot"></span>
+                    <span class="status-label">曲轴状态：</span>
+                    <span class="status-normal" id="crankshaftStatus">正常</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot green" id="sensorDot"></span>
+                    <span class="status-label">传感器：</span>
+                    <span class="status-normal" id="sensorStatus">在线</span>
+                </div>
+            </div>
+            <div class="status-right" id="currentTime">2025-11-12 17:30:00</div>
+        </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="viewDetails()">查看详情</div>
+        <div class="context-menu-item" onclick="retestRecord()">从头重新检测</div>
+    </div>
+
+    <!-- 开发测试按钮（演示异常状态） -->
+    <button class="dev-test-btn" onclick="simulateError()" title="点击模拟传感器离线异常">
+        测试异常状态
+    </button>
+
+    <script>
+        // 自动缩放以适配屏幕
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1); // 最大不超过1（不放大）
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        // 页面加载时和窗口大小改变时自动缩放
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        let selectedRow = null;
+
+        // 检查所有准备条件是否勾选
+        function checkAllConditions() {
+            const check1 = document.getElementById('check1').checked;
+            const check2 = document.getElementById('check2').checked;
+            const check3 = document.getElementById('check3').checked;
+            const check4 = document.getElementById('check4').checked;
+            const crankshaftNo = document.getElementById('crankshaftNo').value.trim();
+            
+            const startBtn = document.getElementById('startBtn');
+            const statusHint = document.getElementById('statusHint');
+            const statusHintText = document.getElementById('statusHintText');
+            const statusHintIcon = statusHint.querySelector('.status-hint-icon');
+            
+            const allChecked = check1 && check2 && check3 && check4;
+            const hasNo = crankshaftNo !== '';
+            
+            // 更新状态提示栏
+            if (allChecked && hasNo) {
+                statusHint.className = 'status-hint ready';
+                statusHintIcon.textContent = '✓';
+                statusHintText.textContent = '所有准备条件已满足，可以开始检测';
+                startBtn.disabled = false;
+            } else if (!hasNo) {
+                statusHint.className = 'status-hint';
+                statusHintIcon.textContent = '⚠';
+                statusHintText.textContent = '请填写曲轴编号';
+                startBtn.disabled = true;
+            } else {
+                statusHint.className = 'status-hint';
+                statusHintIcon.textContent = '⚠';
+                statusHintText.textContent = '请确认所有准备条件已勾选，"开始检测"按钮目前保持禁用状态';
+                startBtn.disabled = true;
+            }
+        }
+
+        // 监听曲轴编号输入
+        document.getElementById('crankshaftNo').addEventListener('input', checkAllConditions);
+
+        // 初始化检查
+        checkAllConditions();
+
+        // 重置表单
+        function resetForm() {
+            document.getElementById('crankshaftNo').value = '';
+            document.getElementById('workOrder').value = '';
+            document.getElementById('check1').checked = false;
+            document.getElementById('check2').checked = false;
+            document.getElementById('check3').checked = false;
+            document.getElementById('check4').checked = false;
+            checkAllConditions();
+        }
+
+        // 开始检测
+        function startDetection() {
+            const model = document.getElementById('crankshaftModel').value;
+            const no = document.getElementById('crankshaftNo').value;
+            const workOrder = document.getElementById('workOrder').value || '未填写';
+            
+            // 计算轴颈数量（根据型号）
+            const journalCount = model === 'HXN5B' ? 7 : 9;
+            
+            // 跳转到 P3 检测执行界面，带上参数
+            const params = new URLSearchParams({
+                model: model,
+                shaft: no,
+                job: workOrder,
+                round: 1,
+                count: journalCount
+            });
+            
+            window.location.href = `P3_检测执行界面.html?${params.toString()}`;
+        }
+
+        // 查看历史记录
+        function viewHistory() {
+            window.location.href = 'P5_历史记录.html';
+        }
+
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = 'P1_登录页.html';
+            }
+        }
+
+        // 更新当前时间
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('currentTime').textContent = 
+                `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 每秒更新时间
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // ==================== 底部状态栏实时监控功能 ====================
+        
+        // 模拟系统状态
+        let systemStatus = {
+            selfCheck: 'normal',     // normal / error
+            crankshaft: 'normal',    // normal / warning / error
+            sensor: 'online'         // online / offline
+        };
+
+        // 更新状态显示
+        function updateStatusBar() {
+            // 自检状态
+            const selfCheckDot = document.getElementById('selfCheckDot');
+            const selfCheckStatus = document.getElementById('selfCheckStatus');
+            
+            if (systemStatus.selfCheck === 'normal') {
+                selfCheckDot.className = 'status-dot green';
+                selfCheckStatus.className = 'status-normal';
+                selfCheckStatus.textContent = '正常';
+            } else {
+                selfCheckDot.className = 'status-dot red';
+                selfCheckStatus.className = 'status-error';
+                selfCheckStatus.textContent = '异常';
+            }
+
+            // 曲轴状态
+            const crankshaftDot = document.getElementById('crankshaftDot');
+            const crankshaftStatus = document.getElementById('crankshaftStatus');
+            
+            if (systemStatus.crankshaft === 'normal') {
+                crankshaftDot.className = 'status-dot green';
+                crankshaftStatus.className = 'status-normal';
+                crankshaftStatus.textContent = '正常';
+            } else if (systemStatus.crankshaft === 'warning') {
+                crankshaftDot.className = 'status-dot yellow';
+                crankshaftStatus.className = 'status-warning';
+                crankshaftStatus.textContent = '警告';
+            } else {
+                crankshaftDot.className = 'status-dot red';
+                crankshaftStatus.className = 'status-error';
+                crankshaftStatus.textContent = '异常';
+            }
+
+            // 传感器状态
+            const sensorDot = document.getElementById('sensorDot');
+            const sensorStatus = document.getElementById('sensorStatus');
+            
+            if (systemStatus.sensor === 'online') {
+                sensorDot.className = 'status-dot green';
+                sensorStatus.className = 'status-normal';
+                sensorStatus.textContent = '在线';
+            } else {
+                sensorDot.className = 'status-dot red';
+                sensorStatus.className = 'status-error';
+                sensorStatus.textContent = '离线';
+            }
+        }
+
+        // 切换曲轴详情（管理员功能）
+        function toggleCrankshaftDetail() {
+            const userRole = document.getElementById('userRole').textContent;
+            
+            if (userRole === '管理员') {
+                alert('曲轴详细状态：\n\n位置：工位 1\n温度：23.5°C\n振动：正常范围\n最后检测：2025-11-12 15:30\n\n此功能仅管理员可见');
+            } else {
+                console.log('操作员无权查看详细状态');
+            }
+        }
+
+        // 模拟异常状态（用于测试）
+        function simulateError() {
+            systemStatus.sensor = 'offline';
+            updateStatusBar();
+            
+            // 3秒后恢复
+            setTimeout(() => {
+                systemStatus.sensor = 'online';
+                updateStatusBar();
+            }, 3000);
+        }
+
+        // 初始化状态栏
+        updateStatusBar();
+
+        // 定期检查状态（每5秒）
+        setInterval(updateStatusBar, 5000);
+
+        // 表格行点击事件
+        const tableBody = document.getElementById('recordsTableBody');
+        tableBody.addEventListener('click', function(e) {
+            const row = e.target.closest('tr');
+            if (row) {
+                // 移除其他行的选中状态
+                document.querySelectorAll('tbody tr').forEach(tr => {
+                    tr.style.backgroundColor = '';
+                });
+                selectedRow = row;
+            }
+        });
+
+        // 表格行双击事件 - 查看详情
+        tableBody.addEventListener('dblclick', function(e) {
+            const row = e.target.closest('tr');
+            if (row) {
+                viewDetails();
+            }
+        });
+
+        // 表格行右键菜单
+        tableBody.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            const row = e.target.closest('tr');
+            if (row) {
+                selectedRow = row;
+                
+                const contextMenu = document.getElementById('contextMenu');
+                const status = row.getAttribute('data-status');
+                
+                // 如果是已完成记录，只显示查看详情
+                if (status === 'completed') {
+                    contextMenu.innerHTML = '<div class="context-menu-item" onclick="viewDetails()">查看详情</div>';
+                } else {
+                    // 检测中断记录显示两个选项
+                    contextMenu.innerHTML = `
+                        <div class="context-menu-item" onclick="viewDetails()">查看详情</div>
+                        <div class="context-menu-item" onclick="retestRecord()">从头重新检测</div>
+                    `;
+                }
+                
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+            }
+        });
+
+        // 点击其他地方关闭右键菜单
+        document.addEventListener('click', function() {
+            document.getElementById('contextMenu').style.display = 'none';
+        });
+
+        // 查看详情
+        function viewDetails() {
+            if (selectedRow) {
+                const cells = selectedRow.cells;
+                const model = cells[1].textContent;
+                const shaftId = cells[2].textContent;
+                const round = cells[3].textContent.match(/\d+/)[0]; // 提取数字
+                
+                // 跳转到 P4 检测报告页面
+                window.location.href = `P4_检测报告.html?model=${model}&shaft=${shaftId}&round=${round}`;
+            }
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        // 重新检测
+        function retestRecord() {
+            if (selectedRow) {
+                const cells = selectedRow.cells;
+                const model = cells[1].textContent;
+                const no = cells[2].textContent;
+                const round = parseInt(cells[3].textContent.match(/\d+/)[0]); // 提取轮次数字
+                
+                if (confirm(`确认要从头重新检测该曲轴吗？\n\n曲轴型号：${model}\n曲轴编号：${no}\n当前轮次：第 ${round} 次\n新轮次：第 ${round + 1} 次\n\n将继承原有信息并开始新的检测轮次。`)) {
+                    // 自动填充表单
+                    const modelSelect = document.getElementById('crankshaftModel');
+                    for (let i = 0; i < modelSelect.options.length; i++) {
+                        if (modelSelect.options[i].value === model) {
+                            modelSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    document.getElementById('crankshaftNo').value = no;
+                    
+                    // 滚动到顶部
+                    document.querySelector('.content-area').scrollTop = 0;
+                    
+                    // 高亮曲轴编号输入框
+                    document.getElementById('crankshaftNo').focus();
+                    
+                    // 更新检查状态
+                    checkAllConditions();
+                }
+            }
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

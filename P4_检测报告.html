@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P4 - 检测报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #E8EAED;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主窗口容器 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            background-color: #E8EAED;
+            transform-origin: center center;
+        }
+
+        /* 自动缩放 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 顶部标题栏 */
+        .title-bar {
+            height: 45px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .title-left {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .system-title {
+            font-size: 15px;
+            font-weight: normal;
+            color: #FFFFFF;
+        }
+
+        .version {
+            font-size: 10px;
+            color: #A0AEC0;
+        }
+
+        /* 信息栏 */
+        .info-bar {
+            background-color: #F7FAFC;
+            padding: 15px 30px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .info-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .info-group {
+            display: flex;
+            gap: 25px;
+            font-size: 13px;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 6px;
+        }
+
+        .info-label {
+            color: #718096;
+        }
+
+        .info-value {
+            color: #2D3748;
+            font-weight: bold;
+        }
+
+        .overall-result {
+            padding: 6px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .overall-result.pass {
+            background-color: #C6F6D5;
+            color: #22543D;
+        }
+
+        .overall-result.fail {
+            background-color: #FED7D7;
+            color: #742A2A;
+        }
+
+        .role-info {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* 主内容区 */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        /* Tab 区域 */
+        .tab-container {
+            flex: 0 0 auto;
+            background-color: #FFFFFF;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: #F7FAFC;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .tab-item {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+            color: #718096;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            position: relative;
+        }
+
+        .tab-item:hover {
+            background-color: #EDF2F7;
+        }
+
+        .tab-item.active {
+            color: #2C5282;
+            background-color: #FFFFFF;
+            border-bottom-color: #4299E1;
+        }
+
+        /* 表格区域 */
+        .table-area {
+            height: 380px;
+            overflow-y: auto;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: #F7FAFC;
+            z-index: 10;
+        }
+
+        th {
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            color: #4A5568;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #EDF2F7;
+            transition: background-color 0.2s;
+        }
+
+        tbody tr:hover {
+            background-color: #F7FAFC;
+        }
+
+        tbody tr.fail-row {
+            background-color: #FFF5F5;
+        }
+
+        td {
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #2D3748;
+            text-align: center;
+        }
+
+        td.fail-cell {
+            background-color: #FED7D7;
+            color: #742A2A;
+            font-weight: bold;
+        }
+
+        .result-pass {
+            color: #38A169;
+            font-weight: 600;
+        }
+
+        .result-fail {
+            color: #E53E3E;
+            font-weight: 600;
+        }
+
+        /* 异常摘要区 */
+        .summary-panel {
+            flex: 0 0 auto;
+            background-color: #FFFFFF;
+            border-radius: 6px;
+            padding: 20px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .summary-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #FFF5F5;
+            border-left: 4px solid #E53E3E;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #742A2A;
+        }
+
+        .summary-item-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .summary-all-pass {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background-color: #F0FFF4;
+            border-left: 4px solid #48BB78;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #22543D;
+            font-weight: 600;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            background-color: #FFFFFF;
+            padding: 15px 30px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-left {
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 35px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 130px;
+        }
+
+        .btn-back {
+            background-color: #A0AEC0;
+            color: #FFFFFF;
+        }
+
+        .btn-back:hover {
+            background-color: #718096;
+        }
+
+        .btn-retest {
+            background-color: #F6AD55;
+            color: #FFFFFF;
+        }
+
+        .btn-retest:hover {
+            background-color: #ED8936;
+            box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+        }
+
+        .btn-export {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-export:hover {
+            background-color: #3182CE;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+
+        /* 底部状态栏 */
+        .statusbar {
+            height: 28px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            font-size: 11px;
+        }
+
+        .status-left {
+            flex: 1;
+        }
+
+        .status-right {
+            flex: 1;
+            text-align: right;
+        }
+
+        .status-normal {
+            color: #68D391;
+        }
+
+        /* 成功提示条 */
+        .success-toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #48BB78;
+            color: #FFFFFF;
+            padding: 15px 30px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-size: 15px;
+            font-weight: bold;
+            display: none;
+            z-index: 2000;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .success-toast.show {
+            display: block;
+        }
+
+        /* 模态对话框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            min-width: 500px;
+            max-width: 600px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            width: 120px;
+            font-size: 14px;
+            color: #4A5568;
+            text-align: right;
+            padding-right: 15px;
+        }
+
+        .form-input {
+            flex: 1;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 14px;
+            border: 1px solid #CBD5E0;
+            border-radius: 4px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .form-input:disabled {
+            background-color: #EDF2F7;
+            color: #718096;
+        }
+
+        .form-hint {
+            margin-left: 135px;
+            font-size: 12px;
+            color: #A0AEC0;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 35px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-primary:hover {
+            background-color: #3182CE;
+        }
+
+        .modal-btn-secondary {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: #CBD5E0;
+        }
+
+        /* 滚动条 */
+        .table-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-area::-webkit-scrollbar-track {
+            background: #F7FAFC;
+        }
+
+        .table-area::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 顶部标题栏 -->
+        <div class="title-bar">
+            <div class="title-left">
+                <span class="system-title">曲轴自动检测系统</span>
+                <span class="version">v1.0.0</span>
+            </div>
+        </div>
+
+        <!-- 信息栏 -->
+        <div class="info-bar">
+            <div class="info-main">
+                <div class="info-group">
+                    <div class="info-item">
+                        <span class="info-label">机型：</span>
+                        <span class="info-value" id="modelInfo">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">曲轴编号：</span>
+                        <span class="info-value" id="shaftInfo">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">工单号：</span>
+                        <span class="info-value" id="jobInfo">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">检测轮次：</span>
+                        <span class="info-value" id="roundInfo">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">检测结束：</span>
+                        <span class="info-value" id="endTimeInfo">-</span>
+                    </div>
+                </div>
+                <div class="overall-result pass" id="overallResult">整体验收结果：✓ 合格</div>
+            </div>
+            <div class="role-info">当前角色：操作员</div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-area">
+            <!-- Tab 区域 -->
+            <div class="tab-container">
+                <div class="tab-bar">
+                    <div class="tab-item active" data-tab="runout" onclick="switchTab('runout')">跳动量</div>
+                    <div class="tab-item" data-tab="roughness" onclick="switchTab('roughness')">粗糙度</div>
+                    <div class="tab-item" data-tab="diameter" onclick="switchTab('diameter')">直径</div>
+                </div>
+
+                <div class="table-area">
+                    <!-- 跳动量表格 -->
+                    <div class="tab-content active" id="runout-content">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">轴颈号</th>
+                                    <th style="width: 25%;">测量值</th>
+                                    <th style="width: 25%;">标准要求</th>
+                                    <th style="width: 30%;">判定结果</th>
+                                </tr>
+                            </thead>
+                            <tbody id="runout-tbody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 粗糙度表格 -->
+                    <div class="tab-content" id="roughness-content">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">轴颈号</th>
+                                    <th style="width: 25%;">测量值</th>
+                                    <th style="width: 25%;">标准要求</th>
+                                    <th style="width: 30%;">判定结果</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roughness-tbody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 直径表格 -->
+                    <div class="tab-content" id="diameter-content">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%;">轴颈号</th>
+                                    <th style="width: 25%;">测量值</th>
+                                    <th style="width: 25%;">标准要求</th>
+                                    <th style="width: 30%;">判定结果</th>
+                                </tr>
+                            </thead>
+                            <tbody id="diameter-tbody">
+                                <!-- 动态生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 异常摘要 -->
+            <div class="summary-panel">
+                <div class="summary-title">异常摘要</div>
+                <div class="summary-list" id="summaryList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="control-left">
+                <button class="control-btn btn-back" onclick="goBack()">返回首页</button>
+                <button class="control-btn btn-retest" onclick="retestShaft()">复检本曲轴</button>
+            </div>
+            <div class="control-right">
+                <button class="control-btn btn-export" onclick="showExportDialog()">导出报表</button>
+            </div>
+        </div>
+
+        <!-- 底部状态栏 -->
+        <div class="statusbar">
+            <div class="status-left">自检状态：<span class="status-normal">正常</span></div>
+            <div class="status-right" id="currentTime">2025-11-12 17:30:00</div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div class="success-toast" id="successToast">
+        ✓ 导出成功，本条记录标记为已导出
+    </div>
+
+    <!-- 导出报表对话框 -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-title">导出检测报表</div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label class="form-label">导出路径：</label>
+                    <input type="text" class="form-input" id="exportPath" value="D:/检测报告/" disabled>
+                </div>
+                <div class="form-row">
+                    <label class="form-label">文件名：</label>
+                    <input type="text" class="form-input" id="fileName" disabled>
+                </div>
+                <div class="form-hint">文件将保存为 PDF 格式</div>
+                <div class="form-row">
+                    <label class="form-label">验证密码：</label>
+                    <input type="password" class="form-input" id="exportPassword" placeholder="请输入操作员密码">
+                </div>
+                <div class="form-hint">操作员需输入本人密码，管理员需输入管理员密码</div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="confirmExport()">确认导出</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeExportDialog()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 自动缩放 ====================
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        // ==================== 全局数据 ====================
+        let reportData = {
+            model: '',
+            shaftId: '',
+            jobNo: '',
+            round: 1,
+            journalCount: 9,
+            timestamp: '',
+            results: {
+                runout: [],
+                roughness: [],
+                diameter: []
+            }
+        };
+
+        // ==================== 生成模拟数据 ====================
+        function generateMockData(journalCount) {
+            const runout = [];
+            const roughness = [];
+            const diameter = [];
+
+            for (let i = 1; i <= journalCount; i++) {
+                // 跳动量数据（大部分合格，少数不合格）
+                const runoutValue = (Math.random() * 0.08).toFixed(3);
+                runout.push({
+                    journal: i,
+                    value: runoutValue,
+                    pass: parseFloat(runoutValue) <= 0.050
+                });
+
+                // 粗糙度数据
+                const roughnessValue = (Math.random() * 2.0).toFixed(2);
+                roughness.push({
+                    journal: i,
+                    value: roughnessValue,
+                    pass: parseFloat(roughnessValue) <= 1.60
+                });
+
+                // 直径数据
+                const diameterValue = (219.95 + Math.random() * 0.10).toFixed(2);
+                diameter.push({
+                    journal: i,
+                    value: diameterValue,
+                    pass: Math.abs(parseFloat(diameterValue) - 220.00) <= 0.05
+                });
+            }
+
+            return { runout, roughness, diameter };
+        }
+
+        // ==================== 初始化 ====================
+        function init() {
+            // 从 URL 获取参数
+            const params = new URLSearchParams(window.location.search);
+            reportData.model = params.get('model') || 'HXN5B';
+            reportData.shaftId = params.get('shaft') || '99';
+            reportData.jobNo = params.get('job') || '88';
+            reportData.round = parseInt(params.get('round')) || 1;
+            reportData.journalCount = reportData.model === 'DF8B' ? 9 : 7;
+
+            // 从 localStorage 获取检测结果
+            const savedData = localStorage.getItem('detectionResults');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    reportData.results = data.results;
+                    reportData.timestamp = data.timestamp;
+                    reportData.journalCount = data.journalCount;
+                } catch (e) {
+                    console.error('数据加载失败', e);
+                    // 如果加载失败，生成模拟数据
+                    reportData.results = generateMockData(reportData.journalCount);
+                    reportData.timestamp = new Date().toISOString();
+                }
+            } else {
+                // 如果没有保存的数据，生成模拟数据
+                reportData.results = generateMockData(reportData.journalCount);
+                reportData.timestamp = new Date().toISOString();
+            }
+
+            // 更新顶部信息
+            document.getElementById('modelInfo').textContent = reportData.model;
+            document.getElementById('shaftInfo').textContent = reportData.shaftId;
+            document.getElementById('jobInfo').textContent = reportData.jobNo;
+            document.getElementById('roundInfo').textContent = `第 ${reportData.round} 次`;
+            
+            const endTime = reportData.timestamp ? new Date(reportData.timestamp) : new Date();
+            const timeStr = `${endTime.getFullYear()}-${String(endTime.getMonth()+1).padStart(2,'0')}-${String(endTime.getDate()).padStart(2,'0')} ${String(endTime.getHours()).padStart(2,'0')}:${String(endTime.getMinutes()).padStart(2,'0')}:${String(endTime.getSeconds()).padStart(2,'0')}`;
+            document.getElementById('endTimeInfo').textContent = timeStr;
+            
+            // 更新操作员信息（从 localStorage 或使用默认值）
+            const currentUser = localStorage.getItem('currentUser') || '操作员';
+            document.getElementById('operatorInfo').textContent = currentUser;
+
+            // 生成文件名
+            document.getElementById('fileName').value = `${reportData.shaftId}_检测报告_第${reportData.round}次_${endTime.getFullYear()}${String(endTime.getMonth()+1).padStart(2,'0')}${String(endTime.getDate()).padStart(2,'0')}.pdf`;
+
+            // 渲染表格
+            renderTables();
+            
+            // 渲染异常摘要
+            renderSummary();
+            
+            // 更新整体结果
+            updateOverallResult();
+            
+            // 更新时间
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        // ==================== 渲染表格 ====================
+        function renderTables() {
+            // 跳动量表格
+            const runoutTbody = document.getElementById('runout-tbody');
+            runoutTbody.innerHTML = '';
+            reportData.results.runout.forEach(item => {
+                const row = document.createElement('tr');
+                if (!item.pass) row.className = 'fail-row';
+                
+                row.innerHTML = `
+                    <td>轴颈 ${item.journal}</td>
+                    <td ${!item.pass ? 'class="fail-cell"' : ''}>${item.value} mm</td>
+                    <td>≤ 0.050 mm</td>
+                    <td class="${item.pass ? 'result-pass' : 'result-fail'}">${item.pass ? '✓ 合格' : '✗ 不合格'}</td>
+                `;
+                runoutTbody.appendChild(row);
+            });
+
+            // 粗糙度表格
+            const roughnessTbody = document.getElementById('roughness-tbody');
+            roughnessTbody.innerHTML = '';
+            reportData.results.roughness.forEach(item => {
+                const row = document.createElement('tr');
+                if (!item.pass) row.className = 'fail-row';
+                
+                row.innerHTML = `
+                    <td>轴颈 ${item.journal}</td>
+                    <td ${!item.pass ? 'class="fail-cell"' : ''}>${item.value} μm</td>
+                    <td>≤ 1.60 μm</td>
+                    <td class="${item.pass ? 'result-pass' : 'result-fail'}">${item.pass ? '✓ 合格' : '✗ 不合格'}</td>
+                `;
+                roughnessTbody.appendChild(row);
+            });
+
+            // 直径表格
+            const diameterTbody = document.getElementById('diameter-tbody');
+            diameterTbody.innerHTML = '';
+            reportData.results.diameter.forEach(item => {
+                const row = document.createElement('tr');
+                if (!item.pass) row.className = 'fail-row';
+                
+                row.innerHTML = `
+                    <td>轴颈 ${item.journal}</td>
+                    <td ${!item.pass ? 'class="fail-cell"' : ''}>${item.value} mm</td>
+                    <td>220.00 ± 0.05 mm</td>
+                    <td class="${item.pass ? 'result-pass' : 'result-fail'}">${item.pass ? '✓ 合格' : '✗ 不合格'}</td>
+                `;
+                diameterTbody.appendChild(row);
+            });
+        }
+
+        // ==================== 渲染异常摘要 ====================
+        function renderSummary() {
+            const summaryList = document.getElementById('summaryList');
+            summaryList.innerHTML = '';
+
+            let hasError = false;
+
+            // 收集所有不合格项
+            const errors = [];
+
+            reportData.results.runout.forEach(item => {
+                if (!item.pass) {
+                    errors.push({
+                        journal: item.journal,
+                        type: '跳动量',
+                        value: item.value + ' mm',
+                        standard: '≤ 0.050 mm'
+                    });
+                    hasError = true;
+                }
+            });
+
+            reportData.results.roughness.forEach(item => {
+                if (!item.pass) {
+                    errors.push({
+                        journal: item.journal,
+                        type: '粗糙度',
+                        value: item.value + ' μm',
+                        standard: '≤ 1.60 μm'
+                    });
+                    hasError = true;
+                }
+            });
+
+            reportData.results.diameter.forEach(item => {
+                if (!item.pass) {
+                    errors.push({
+                        journal: item.journal,
+                        type: '直径',
+                        value: item.value + ' mm',
+                        standard: '220.00 ± 0.05 mm'
+                    });
+                    hasError = true;
+                }
+            });
+
+            if (hasError) {
+                // 显示所有不合格项
+                errors.forEach(error => {
+                    const div = document.createElement('div');
+                    div.className = 'summary-item';
+                    div.innerHTML = `
+                        <span class="summary-item-icon">✗</span>
+                        <span>轴颈 ${error.journal} / ${error.type} / ${error.value} / ${error.standard} / 不合格</span>
+                    `;
+                    summaryList.appendChild(div);
+                });
+            } else {
+                // 全部合格
+                const div = document.createElement('div');
+                div.className = 'summary-all-pass';
+                div.innerHTML = '✓ 本次检测所有项目均合格';
+                summaryList.appendChild(div);
+            }
+        }
+
+        // ==================== 更新整体结果 ====================
+        function updateOverallResult() {
+            const allPass = 
+                reportData.results.runout.every(item => item.pass) &&
+                reportData.results.roughness.every(item => item.pass) &&
+                reportData.results.diameter.every(item => item.pass);
+
+            const resultDiv = document.getElementById('overallResult');
+            if (allPass) {
+                resultDiv.className = 'overall-result pass';
+                resultDiv.textContent = '整体验收结果：✓ 合格';
+            } else {
+                resultDiv.className = 'overall-result fail';
+                resultDiv.textContent = '整体验收结果：✗ 不合格';
+            }
+        }
+
+        // ==================== 切换 Tab ====================
+        function switchTab(tabName) {
+            // 切换标签样式
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // 切换内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-content`).classList.add('active');
+
+            // 滚动到顶部
+            document.querySelector('.table-area').scrollTop = 0;
+        }
+
+        // ==================== 返回首页 ====================
+        function goBack() {
+            window.location.href = 'P2_操作员首页_新建检测任务.html';
+        }
+
+        // ==================== 复检本曲轴 ====================
+        function retestShaft() {
+            // 跳转到 P3，参数中轮次 +1
+            const nextRound = reportData.round + 1;
+            window.location.href = `P3_检测执行界面.html?model=${reportData.model}&shaft=${reportData.shaftId}&job=${reportData.jobNo}&round=${nextRound}&count=${reportData.journalCount}`;
+        }
+
+        // ==================== 显示导出对话框 ====================
+        function showExportDialog() {
+            document.getElementById('exportModal').classList.add('show');
+            document.getElementById('exportPassword').value = '';
+            document.getElementById('exportPassword').focus();
+        }
+
+        // ==================== 关闭导出对话框 ====================
+        function closeExportDialog() {
+            document.getElementById('exportModal').classList.remove('show');
+        }
+
+        // ==================== 确认导出 ====================
+        function confirmExport() {
+            const password = document.getElementById('exportPassword').value;
+            
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+
+            // 模拟验证密码（实际应该调用后端接口）
+            if (password.length < 4) {
+                alert('密码错误，请重新输入');
+                return;
+            }
+
+            // 关闭对话框
+            closeExportDialog();
+
+            // 模拟导出延迟
+            setTimeout(() => {
+                // 显示成功提示
+                const toast = document.getElementById('successToast');
+                toast.classList.add('show');
+
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+
+                // 标记为已导出（可以保存到 localStorage）
+                const exportRecord = {
+                    model: reportData.model,
+                    shaftId: reportData.shaftId,
+                    round: reportData.round,
+                    exportTime: new Date().toISOString(),
+                    exported: true
+                };
+                localStorage.setItem('lastExport', JSON.stringify(exportRecord));
+            }, 500);
+        }
+
+        // ==================== 更新时间 ====================
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('currentTime').textContent = 
+                `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // ==================== 重新生成数据（演示用）====================
+        function regenerateData() {
+            reportData.results = generateMockData(reportData.journalCount);
+            reportData.timestamp = new Date().toISOString();
+            
+            // 重新渲染
+            renderTables();
+            renderSummary();
+            updateOverallResult();
+            
+            // 显示提示
+            const toast = document.getElementById('successToast');
+            const toastText = toast.querySelector('.toast-text');
+            toastText.textContent = '✓ 数据已重新生成';
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // ==================== 页面加载 ====================
+        window.addEventListener('load', init);
+
+        // 键盘快捷键：ESC 关闭对话框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeExportDialog();
+            }
+        });
+
+        // 双击标题重新生成数据（演示用）
+        document.addEventListener('DOMContentLoaded', () => {
+            const titleBar = document.querySelector('.title-bar');
+            if (titleBar) {
+                titleBar.addEventListener('dblclick', regenerateData);
+            }
+        });
+    </script>
+</body>
+</html>
+
+

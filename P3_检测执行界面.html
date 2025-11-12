@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P3 - 检测执行界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #E8EAED;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 主窗口容器 */
+        .main-window {
+            width: 1920px;
+            height: 1080px;
+            display: flex;
+            flex-direction: column;
+            background-color: #E8EAED;
+            transform-origin: center center;
+        }
+
+        /* 自动缩放 */
+        @media screen {
+            .main-window {
+                transform: scale(var(--scale, 1));
+            }
+        }
+
+        /* 顶部标题栏 */
+        .title-bar {
+            height: 45px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .title-left {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .system-title {
+            font-size: 15px;
+            font-weight: normal;
+            color: #FFFFFF;
+        }
+
+        .version {
+            font-size: 10px;
+            color: #A0AEC0;
+        }
+
+        /* 信息栏 */
+        .info-bar {
+            background-color: #F7FAFC;
+            padding: 12px 30px;
+            border-bottom: 2px solid #E2E8F0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-group {
+            display: flex;
+            gap: 25px;
+            font-size: 13px;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 6px;
+        }
+
+        .info-label {
+            color: #718096;
+        }
+
+        .info-value {
+            color: #2D3748;
+            font-weight: bold;
+        }
+
+        .stage-status {
+            font-size: 14px;
+            color: #4299E1;
+            font-weight: bold;
+        }
+
+        /* 状态提示条 */
+        .status-alert {
+            background-color: #FED7D7;
+            color: #742A2A;
+            padding: 10px 30px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status-alert.show {
+            display: block;
+        }
+
+        /* 主内容区 */
+        .content-area {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        /* 左侧阶段导航 */
+        .left-panel {
+            width: 280px;
+            background-color: #FFFFFF;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E2E8F0;
+        }
+
+        .stage-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stage-item {
+            background-color: #F7FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 12px 15px;
+            transition: all 0.3s;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .stage-item.pending {
+            background-color: #F7FAFC;
+            border-color: #E2E8F0;
+        }
+
+        .stage-item.active {
+            border-color: #4299E1;
+            background-color: #EBF8FF;
+        }
+
+        .stage-item.completed {
+            border-color: #48BB78;
+            background-color: #F0FFF4;
+        }
+
+        .stage-item.error {
+            border-color: #E53E3E;
+            background-color: #FFF5F5;
+        }
+
+        .stage-item.skipped {
+            border-color: #CBD5E0;
+            background-color: #EDF2F7;
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stage-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2D3748;
+        }
+
+        .stage-icon {
+            font-size: 16px;
+        }
+
+        .stage-progress {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #4299E1;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 异常警告标识 */
+        .warning-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background-color: #E53E3E;
+            border-radius: 50%;
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: bold;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        /* Tooltip */
+        .stage-item[data-error]:hover::after {
+            content: attr(data-error);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 10px;
+            padding: 8px 12px;
+            background-color: #2D3748;
+            color: #FFFFFF;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* 右侧检测结果区 */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #FFFFFF;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .result-header {
+            background: linear-gradient(to right, #4299E1, #3182CE);
+            color: #FFFFFF;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .result-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 等待状态 */
+        .waiting-state {
+            text-align: center;
+            color: #718096;
+        }
+
+        .waiting-state .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .waiting-state .message {
+            font-size: 18px;
+        }
+
+        /* 测量中状态 */
+        .measuring-state {
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #E2E8F0;
+            border-top-color: #4299E1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .measuring-message {
+            font-size: 18px;
+            color: #4299E1;
+            font-weight: 600;
+        }
+
+        .measuring-hint {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 10px;
+        }
+
+        /* 异常提示卡 */
+        .error-card {
+            width: 100%;
+            max-width: 600px;
+            background-color: #FFF5F5;
+            border: 2px solid #E53E3E;
+            border-radius: 8px;
+            padding: 30px;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #742A2A;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .error-message {
+            font-size: 15px;
+            color: #742A2A;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .error-suggestion {
+            background-color: #FED7D7;
+            border-left: 4px solid #E53E3E;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #742A2A;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .error-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .error-btn-retry {
+            background-color: #F6AD55;
+            color: #FFFFFF;
+        }
+
+        .error-btn-retry:hover {
+            background-color: #ED8936;
+        }
+
+        .error-btn-contact {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .error-btn-contact:hover {
+            background-color: #C53030;
+        }
+
+        /* 结果卡片 */
+        .result-card {
+            width: 100%;
+            max-width: 600px;
+            background-color: #F7FAFC;
+            border: 2px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 25px;
+            animation: slideIn 0.5s;
+        }
+
+        .result-card.fail {
+            border-color: #E53E3E;
+            background-color: #FFF5F5;
+            animation: slideIn 0.5s, borderBreathe 3s ease-in-out 1;
+        }
+
+        .result-card.pass {
+            border-color: #48BB78;
+            background-color: #F0FFF4;
+        }
+
+        /* 红色边框呼吸效果 */
+        @keyframes borderBreathe {
+            0%, 100% {
+                border-color: #E53E3E;
+                box-shadow: 0 0 0 rgba(229, 62, 62, 0);
+            }
+            50% {
+                border-color: #C53030;
+                box-shadow: 0 0 20px rgba(229, 62, 62, 0.4);
+            }
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .card-row:last-child {
+            border-bottom: none;
+        }
+
+        .card-label {
+            font-size: 15px;
+            color: #4A5568;
+        }
+
+        .card-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2D3748;
+        }
+
+        .card-value.pass {
+            color: #38A169;
+        }
+
+        .card-value.fail {
+            color: #E53E3E;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            background-color: #FFFFFF;
+            padding: 15px 30px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            padding: 10px 35px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-start {
+            background-color: #48BB78;
+            color: #FFFFFF;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background-color: #38A169;
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+
+        .btn-pause {
+            background-color: #F6AD55;
+            color: #FFFFFF;
+        }
+
+        .btn-pause:hover:not(:disabled) {
+            background-color: #ED8936;
+            box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+        }
+
+        .btn-stop {
+            background-color: #E53E3E;
+            color: #FFFFFF;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background-color: #C53030;
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+        }
+
+        .btn-back {
+            background-color: #A0AEC0;
+            color: #FFFFFF;
+        }
+
+        .btn-back:hover {
+            background-color: #718096;
+        }
+
+        .btn-restart {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .btn-restart:hover {
+            background-color: #3182CE;
+        }
+
+        /* 底部状态栏 */
+        .statusbar {
+            height: 28px;
+            background: linear-gradient(to bottom, #4A5568, #3A4558);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            font-size: 11px;
+        }
+
+        .status-left {
+            flex: 1;
+        }
+
+        .status-right {
+            flex: 1;
+            text-align: right;
+        }
+
+        .status-normal {
+            color: #68D391;
+        }
+
+        .status-error {
+            color: #FC8181;
+        }
+
+        /* 模态对话框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            min-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 15px;
+        }
+
+        .modal-message {
+            font-size: 15px;
+            color: #4A5568;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background-color: #4299E1;
+            color: #FFFFFF;
+        }
+
+        .modal-btn-primary:hover {
+            background-color: #3182CE;
+        }
+
+        .modal-btn-secondary {
+            background-color: #E2E8F0;
+            color: #2D3748;
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: #CBD5E0;
+        }
+
+        /* 滚动条 */
+        .result-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .result-content::-webkit-scrollbar-track {
+            background: #F7FAFC;
+        }
+
+        .result-content::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-window">
+        <!-- 顶部标题栏 -->
+        <div class="title-bar">
+            <div class="title-left">
+                <span class="system-title">曲轴自动检测系统</span>
+                <span class="version">v1.0.0</span>
+            </div>
+        </div>
+
+        <!-- 状态提示条 -->
+        <div class="status-alert" id="statusAlert">检测已终止</div>
+
+        <!-- 信息栏 -->
+        <div class="info-bar">
+            <div class="info-group">
+                <div class="info-item">
+                    <span class="info-label">机型：</span>
+                    <span class="info-value" id="modelInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">曲轴编号：</span>
+                    <span class="info-value" id="shaftInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">工单号：</span>
+                    <span class="info-value" id="jobInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">检测轮次：</span>
+                    <span class="info-value" id="roundInfo">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">轴颈数量：</span>
+                    <span class="info-value" id="countInfo">-</span>
+                </div>
+            </div>
+            <div class="stage-status" id="stageStatus">就绪</div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-area">
+            <!-- 左侧阶段导航 -->
+            <div class="left-panel">
+                <div class="panel-title">检测流程</div>
+                <div class="stage-list" id="stageList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 右侧检测结果区 -->
+            <div class="right-panel">
+                <div class="result-header" id="resultHeader">检测结果显示</div>
+                <div class="result-content" id="resultContent">
+                    <div class="waiting-state">
+                        <div class="icon">📋</div>
+                        <div class="message">点击"开始检测"启动检测流程</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <button class="control-btn btn-start" id="btnStart" onclick="startDetection()">开始检测</button>
+            <button class="control-btn btn-pause" id="btnPause" onclick="pauseDetection()" disabled>暂停检测</button>
+            <button class="control-btn btn-stop" id="btnStop" onclick="stopDetection()" disabled>终止检测</button>
+            <button class="control-btn btn-restart" id="btnRestart" onclick="restartDetection()" style="display:none;">重新开始</button>
+            <button class="control-btn btn-back" onclick="goBack()">返回首页</button>
+        </div>
+
+        <!-- 底部状态栏 -->
+        <div class="statusbar">
+            <div class="status-left">自检状态：<span class="status-normal" id="selfCheckStatus">正常</span></div>
+            <div class="status-right" id="currentTime">2025-11-12 17:30:00</div>
+        </div>
+    </div>
+
+    <!-- 模态对话框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">提示</div>
+            <div class="modal-message" id="modalMessage">消息内容</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="modalConfirm">确定</button>
+                <button class="modal-btn modal-btn-secondary" id="modalCancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 自动缩放 ====================
+        function autoScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const designWidth = 1920;
+            const designHeight = 1080;
+            
+            const scaleX = windowWidth / designWidth;
+            const scaleY = windowHeight / designHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            document.documentElement.style.setProperty('--scale', scale);
+        }
+
+        window.addEventListener('load', autoScale);
+        window.addEventListener('resize', autoScale);
+
+        // ==================== 状态机定义 ====================
+        const stages = [
+            { name: '准备工作', status: 'pending', error: null },
+            { name: '跳动量检测', status: 'pending', error: null },
+            { name: '粗糙度检测', status: 'pending', error: null },
+            { name: '更换支撑板', status: 'pending', error: null },
+            { name: '直径检测', status: 'pending', error: null },
+            { name: '检测结束', status: 'pending', error: null }
+        ];
+
+        // ==================== 全局状态 ====================
+        const state = {
+            model: '',
+            shaftId: '',
+            jobNo: '',
+            round: 1,
+            journalCount: 9,
+            
+            currentStage: 0,
+            currentJournal: 0,
+            isRunning: false,
+            isPaused: false,
+            isTerminated: false,
+            
+            retryCount: 0,      // 当前步骤重试次数
+            maxRetries: 3,      // 最大重试次数
+            
+            timer: null,
+            
+            results: {
+                runout: [],
+                roughness: [],
+                diameter: []
+            }
+        };
+
+        // ==================== 初始化 ====================
+        function parseUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            state.model = params.get('model') || 'HXN5B';
+            state.shaftId = params.get('shaft') || 'QZ0003';
+            state.jobNo = params.get('job') || '8899';
+            state.round = parseInt(params.get('round')) || 2;
+            state.journalCount = parseInt(params.get('count')) || 9;
+
+            document.getElementById('modelInfo').textContent = state.model;
+            document.getElementById('shaftInfo').textContent = state.shaftId;
+            document.getElementById('jobInfo').textContent = state.jobNo;
+            document.getElementById('roundInfo').textContent = `第 ${state.round} 次`;
+            document.getElementById('countInfo').textContent = state.journalCount;
+
+            // 尝试恢复状态
+            loadStateFromStorage();
+            renderStageList();
+        }
+
+        // ==================== 渲染阶段列表 ====================
+        function renderStageList() {
+            const container = document.getElementById('stageList');
+            container.innerHTML = '';
+
+            stages.forEach((stage, index) => {
+                const div = document.createElement('div');
+                div.className = `stage-item ${stage.status}`;
+                div.id = `stage-${index}`;
+                
+                if (stage.error) {
+                    div.setAttribute('data-error', stage.error);
+                }
+
+                let icon = '⏳';
+                if (stage.status === 'active') icon = '▶';
+                else if (stage.status === 'completed') icon = '✓';
+                else if (stage.status === 'error') icon = '✗';
+                else if (stage.status === 'skipped') icon = '⊗';
+
+                div.innerHTML = `
+                    <div class="stage-header">
+                        <span class="stage-name">${index + 1}. ${stage.name}</span>
+                        <span class="stage-icon">${icon}</span>
+                    </div>
+                    <div class="stage-progress" id="progress-${index}" style="display:none;"></div>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        // ==================== 更新阶段状态 ====================
+        function updateStageStatus(stageIndex, status, errorMsg = null) {
+            stages[stageIndex].status = status;
+            stages[stageIndex].error = errorMsg;
+            renderStageList();
+            saveStateToStorage();
+
+            document.getElementById('stageStatus').textContent = stages[stageIndex].name + (status === 'active' ? '中...' : '');
+        }
+
+        // ==================== 更新轴颈进度 ====================
+        function updateJournalProgress(stageIndex, current, total, hasWarning = false) {
+            const progressDiv = document.getElementById(`progress-${stageIndex}`);
+            if (progressDiv) {
+                progressDiv.style.display = 'flex';
+                
+                // 清空内容
+                progressDiv.innerHTML = `轴颈 ${current} / ${total}`;
+                
+                // 如果有警告，添加红色标识
+                if (hasWarning) {
+                    const badge = document.createElement('span');
+                    badge.className = 'warning-badge';
+                    badge.textContent = '!';
+                    badge.title = '该轴颈检测结果异常';
+                    progressDiv.appendChild(badge);
+                }
+            }
+        }
+
+        // ==================== 标记异常轴颈 ====================
+        function markJournalWarning(stageIndex, journalNum) {
+            // 标记该阶段有异常
+            updateJournalProgress(stageIndex, journalNum, state.journalCount, true);
+        }
+
+        // ==================== 保存状态到 localStorage ====================
+        function saveStateToStorage() {
+            const stateData = {
+                stages: stages,
+                currentStage: state.currentStage,
+                currentJournal: state.currentJournal,
+                results: state.results,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('detectionState', JSON.stringify(stateData));
+        }
+
+        // ==================== 从 localStorage 加载状态 ====================
+        function loadStateFromStorage() {
+            const savedData = localStorage.getItem('detectionState');
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    // 恢复状态（可选：询问用户是否继续）
+                    // 这里简化为自动加载
+                    Object.assign(stages, data.stages);
+                    state.currentStage = data.currentStage;
+                    state.currentJournal = data.currentJournal;
+                    state.results = data.results;
+                } catch (e) {
+                    console.error('状态恢复失败', e);
+                }
+            }
+        }
+
+        // ==================== 清除状态 ====================
+        function clearStateFromStorage() {
+            localStorage.removeItem('detectionState');
+            localStorage.removeItem('detectionResults');
+            
+            // 重置所有阶段
+            stages.forEach(stage => {
+                stage.status = 'pending';
+                stage.error = null;
+            });
+            
+            state.currentStage = 0;
+            state.currentJournal = 0;
+            state.retryCount = 0;
+            state.results = { runout: [], roughness: [], diameter: [] };
+        }
+
+        // ==================== 显示测量中 ====================
+        function showMeasuring(message, hint = '') {
+            const content = `
+                <div class="measuring-state">
+                    <div class="spinner"></div>
+                    <div class="measuring-message">${message}</div>
+                    ${hint ? `<div class="measuring-hint">${hint}</div>` : ''}
+                </div>
+            `;
+            document.getElementById('resultContent').innerHTML = content;
+        }
+
+        // ==================== 显示异常卡片 ====================
+        function showError(errorMsg, suggestion, canRetry = true) {
+            const retryBtn = canRetry ? `<button class="error-btn error-btn-retry" onclick="retryCurrentStep()">重新尝试</button>` : '';
+            const contactBtn = state.retryCount >= state.maxRetries ? `<button class="error-btn error-btn-contact" onclick="contactMaintenance()">联系维护人员</button>` : '';
+            
+            const content = `
+                <div class="error-card">
+                    <div class="error-title">⚠️ 检测异常</div>
+                    <div class="error-message">${errorMsg}</div>
+                    <div class="error-suggestion">
+                        💡 处理建议：${suggestion}
+                    </div>
+                    <div class="error-actions">
+                        ${retryBtn}
+                        ${contactBtn}
+                    </div>
+                </div>
+            `;
+            document.getElementById('resultContent').innerHTML = content;
+            
+            // 更新当前阶段为错误状态
+            updateStageStatus(state.currentStage, 'error', errorMsg);
+            
+            // 更新状态栏
+            document.getElementById('selfCheckStatus').textContent = '异常';
+            document.getElementById('selfCheckStatus').className = 'status-error';
+        }
+
+        // ==================== 模拟随机错误 ====================
+        function simulateRandomError() {
+            // 10% 概率触发错误（用于测试）
+            return Math.random() < 0.1;
+        }
+
+        // ==================== 重试当前步骤 ====================
+        function retryCurrentStep() {
+            state.retryCount++;
+            
+            if (state.retryCount >= state.maxRetries) {
+                showError(
+                    '重试次数已达上限',
+                    '请联系维护人员检查设备状态',
+                    false
+                );
+                return;
+            }
+            
+            // 恢复当前阶段状态为 active
+            updateStageStatus(state.currentStage, 'active');
+            
+            // 恢复状态栏
+            document.getElementById('selfCheckStatus').textContent = '正常';
+            document.getElementById('selfCheckStatus').className = 'status-normal';
+            
+            // 重新执行当前阶段
+            executeStage();
+        }
+
+        // ==================== 联系维护人员 ====================
+        function contactMaintenance() {
+            showModal(
+                '联系维护人员',
+                '检测设备出现异常，请联系维护人员处理。\n\n联系电话：400-123-4567',
+                () => {
+                    // 可以跳转到故障报修页面或返回首页
+                },
+                true
+            );
+        }
+
+        // ==================== 显示检测结果 ====================
+        function showResult(stageName, journalNum, value, unit, standard, pass) {
+            const cardClass = pass ? 'pass' : 'fail';
+            const resultText = pass ? '✓ 合格' : '✗ 不合格';
+            const resultClass = pass ? 'pass' : 'fail';
+            
+            const content = `
+                <div class="result-card ${cardClass}">
+                    <div class="card-title">轴颈 ${journalNum} ${stageName}完成</div>
+                    <div class="card-row">
+                        <span class="card-label">测量值：</span>
+                        <span class="card-value">${value} ${unit}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">标准要求：</span>
+                        <span class="card-value">${standard}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">判定结果：</span>
+                        <span class="card-value ${resultClass}">${resultText}</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('resultContent').innerHTML = content;
+        }
+
+        // ==================== 开始检测 ====================
+        function startDetection() {
+            if (state.isRunning) return;
+
+            state.isRunning = true;
+            state.isPaused = false;
+            state.isTerminated = false;
+            state.retryCount = 0;
+
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnPause').disabled = false;
+            document.getElementById('btnStop').disabled = false;
+            document.getElementById('btnRestart').style.display = 'none';
+            document.getElementById('statusAlert').classList.remove('show');
+
+            executeStage();
+        }
+
+        // ==================== 执行阶段 ====================
+        function executeStage() {
+            if (!state.isRunning || state.isPaused || state.isTerminated) return;
+
+            if (state.currentStage >= 6) {
+                completeDetection();
+                return;
+            }
+
+            updateStageStatus(state.currentStage, 'active');
+
+            // 模拟随机错误（测试用）
+            if (simulateRandomError()) {
+                const errorMessages = [
+                    { msg: '机械手未响应', suggestion: '请检查机械手电源连接' },
+                    { msg: '传感器通讯超时', suggestion: '请检查传感器连接线缆' },
+                    { msg: '数据采集失败', suggestion: '请重启数据采集模块' }
+                ];
+                const error = errorMessages[Math.floor(Math.random() * errorMessages.length)];
+                showError(error.msg, error.suggestion);
+                return;
+            }
+
+            switch (state.currentStage) {
+                case 0: executePrepare(); break;
+                case 1: executeRunout(); break;
+                case 2: executeRoughness(); break;
+                case 3: executeChangeSupport(); break;
+                case 4: executeDiameter(); break;
+                case 5: executeFinish(); break;
+            }
+        }
+
+        // ==================== 准备工作 ====================
+        function executePrepare() {
+            const steps = ['开机自检', '设备复位', '关闭机械手电源', '更换支撑板1', '开启机械手电源'];
+            let stepIndex = 0;
+            
+            function nextStep() {
+                if (!state.isRunning || state.isPaused) return;
+                
+                if (stepIndex >= steps.length) {
+                    updateStageStatus(0, 'completed');
+                    state.currentStage = 1;
+                    state.retryCount = 0;
+                    state.timer = setTimeout(executeStage, 1000);
+                    return;
+                }
+                
+                showMeasuring(steps[stepIndex] + '...', '请勿操作设备');
+                stepIndex++;
+                state.timer = setTimeout(nextStep, 2000);
+            }
+            
+            document.getElementById('resultHeader').textContent = '准备工作';
+            nextStep();
+        }
+
+        // ==================== 跳动量检测 ====================
+        function executeRunout() {
+            if (state.currentJournal >= state.journalCount) {
+                updateStageStatus(1, 'completed');
+                state.currentStage = 2;
+                state.currentJournal = 0;
+                state.retryCount = 0;
+                state.timer = setTimeout(executeStage, 1000);
+                return;
+            }
+
+            const journalNum = state.currentJournal + 1;
+            updateJournalProgress(1, journalNum, state.journalCount);
+            document.getElementById('resultHeader').textContent = `轴颈 ${journalNum} - 跳动量检测`;
+            
+            showMeasuring(`正在测量轴颈 ${journalNum} 跳动量...`, '曲轴旋转中，请勿触碰');
+            
+            state.timer = setTimeout(() => {
+                if (!state.isRunning || state.isPaused) return;
+                
+                const value = (Math.random() * 0.065).toFixed(3);
+                const pass = parseFloat(value) <= 0.050;
+                
+                state.results.runout.push({ journal: journalNum, value: value, pass: pass });
+                showResult('跳动量检测', journalNum, value, 'mm', '≤ 0.050 mm', pass);
+                
+                // 如果不合格，标记异常
+                if (!pass) {
+                    markJournalWarning(1, journalNum);
+                }
+                
+                state.currentJournal++;
+                state.timer = setTimeout(executeRunout, 1500);
+            }, 2500);
+        }
+
+        // ==================== 粗糙度检测 ====================
+        function executeRoughness() {
+            if (state.currentJournal >= state.journalCount) {
+                updateStageStatus(2, 'completed');
+                state.currentStage = 3;
+                state.currentJournal = 0;
+                state.retryCount = 0;
+                state.timer = setTimeout(executeStage, 1000);
+                return;
+            }
+
+            const journalNum = state.currentJournal + 1;
+            updateJournalProgress(2, journalNum, state.journalCount);
+            document.getElementById('resultHeader').textContent = `轴颈 ${journalNum} - 粗糙度检测`;
+            
+            showMeasuring(`正在测量轴颈 ${journalNum} 粗糙度...`, '传感器接触测量中');
+            
+            state.timer = setTimeout(() => {
+                if (!state.isRunning || state.isPaused) return;
+                
+                const value = (Math.random() * 2.0).toFixed(2);
+                const pass = parseFloat(value) <= 1.60;
+                
+                state.results.roughness.push({ journal: journalNum, value: value, pass: pass });
+                showResult('粗糙度检测', journalNum, value, 'μm', '≤ 1.60 μm', pass);
+                
+                // 如果不合格，标记异常
+                if (!pass) {
+                    markJournalWarning(2, journalNum);
+                }
+                
+                state.currentJournal++;
+                state.timer = setTimeout(executeRoughness, 1500);
+            }, 2500);
+        }
+
+        // ==================== 更换支撑板 ====================
+        function executeChangeSupport() {
+            document.getElementById('resultHeader').textContent = '更换支撑板';
+            showMeasuring('正在更换传感器支撑板...', '机械手电源已关闭');
+            
+            state.timer = setTimeout(() => {
+                if (!state.isRunning || state.isPaused) return;
+                
+                updateStageStatus(3, 'completed');
+                state.currentStage = 4;
+                state.currentJournal = 0;
+                state.retryCount = 0;
+                state.timer = setTimeout(executeStage, 1000);
+            }, 3000);
+        }
+
+        // ==================== 直径检测 ====================
+        function executeDiameter() {
+            if (state.currentJournal >= state.journalCount) {
+                updateStageStatus(4, 'completed');
+                state.currentStage = 5;
+                state.retryCount = 0;
+                state.timer = setTimeout(executeStage, 1000);
+                return;
+            }
+
+            const journalNum = state.currentJournal + 1;
+            updateJournalProgress(4, journalNum, state.journalCount);
+            document.getElementById('resultHeader').textContent = `轴颈 ${journalNum} - 直径检测`;
+            
+            showMeasuring(`正在测量轴颈 ${journalNum} 直径...`, '多点测量中');
+            
+            state.timer = setTimeout(() => {
+                if (!state.isRunning || state.isPaused) return;
+                
+                const value = (219.95 + Math.random() * 0.10).toFixed(3);
+                const pass = Math.abs(parseFloat(value) - 220.00) <= 0.05;
+                
+                state.results.diameter.push({ journal: journalNum, value: value, pass: pass });
+                showResult('直径检测', journalNum, value, 'mm', '220.00 ± 0.05 mm', pass);
+                
+                // 如果不合格，标记异常
+                if (!pass) {
+                    markJournalWarning(4, journalNum);
+                }
+                
+                state.currentJournal++;
+                state.timer = setTimeout(executeDiameter, 1500);
+            }, 2500);
+        }
+
+        // ==================== 检测结束 ====================
+        function executeFinish() {
+            document.getElementById('resultHeader').textContent = '检测结束';
+            showMeasuring('正在保存数据并关闭系统...', '请稍候');
+            
+            updateStageStatus(5, 'completed');
+            
+            state.timer = setTimeout(() => {
+                completeDetection();
+            }, 2000);
+        }
+
+        // ==================== 完成检测 ====================
+        function completeDetection() {
+            state.isRunning = false;
+            
+            const detectionData = {
+                model: state.model,
+                shaftId: state.shaftId,
+                jobNo: state.jobNo,
+                round: state.round,
+                journalCount: state.journalCount,
+                results: state.results,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('detectionResults', JSON.stringify(detectionData));
+            clearStateFromStorage();
+            
+            setTimeout(() => {
+                window.location.href = `P4_检测报告.html?model=${state.model}&shaft=${state.shaftId}&job=${state.jobNo}&round=${state.round}`;
+            }, 1000);
+        }
+
+        // ==================== 暂停检测 ====================
+        function pauseDetection() {
+            if (!state.isRunning || state.isPaused) return;
+
+            state.isPaused = true;
+            clearTimeout(state.timer);
+
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStart').textContent = '继续检测';
+            document.getElementById('btnPause').disabled = true;
+
+            document.getElementById('stageStatus').textContent = '已暂停';
+        }
+
+        // ==================== 终止检测 ====================
+        function stopDetection() {
+            if (!state.isRunning) return;
+
+            showModal(
+                '确认终止',
+                '确定要终止当前检测吗？\n当前进度将保存，可以重新开始。',
+                () => {
+                    state.isRunning = false;
+                    state.isPaused = false;
+                    state.isTerminated = true;
+                    clearTimeout(state.timer);
+
+                    document.getElementById('btnStart').style.display = 'none';
+                    document.getElementById('btnPause').disabled = true;
+                    document.getElementById('btnStop').disabled = true;
+                    document.getElementById('btnRestart').style.display = 'inline-block';
+                    document.getElementById('statusAlert').classList.add('show');
+
+                    document.getElementById('stageStatus').textContent = '已终止';
+                    
+                    const content = `
+                        <div class="waiting-state">
+                            <div class="icon">⚠️</div>
+                            <div class="message" style="color: #E53E3E;">检测已终止</div>
+                        </div>
+                    `;
+                    document.getElementById('resultContent').innerHTML = content;
+                }
+            );
+        }
+
+        // ==================== 重新开始检测 ====================
+        function restartDetection() {
+            showModal(
+                '确认重新开始',
+                '将清空所有检测状态并重新开始，确定吗？',
+                () => {
+                    clearStateFromStorage();
+                    renderStageList();
+                    
+                    state.currentStage = 0;
+                    state.currentJournal = 0;
+                    state.isTerminated = false;
+                    state.retryCount = 0;
+                    
+                    document.getElementById('btnStart').style.display = 'inline-block';
+                    document.getElementById('btnStart').disabled = false;
+                    document.getElementById('btnStart').textContent = '开始检测';
+                    document.getElementById('btnRestart').style.display = 'none';
+                    document.getElementById('statusAlert').classList.remove('show');
+                    
+                    document.getElementById('stageStatus').textContent = '就绪';
+                    
+                    const content = `
+                        <div class="waiting-state">
+                            <div class="icon">📋</div>
+                            <div class="message">点击"开始检测"启动检测流程</div>
+                        </div>
+                    `;
+                    document.getElementById('resultContent').innerHTML = content;
+                }
+            );
+        }
+
+        // ==================== 返回首页 ====================
+        function goBack() {
+            if (state.isRunning) {
+                showModal(
+                    '确认返回',
+                    '检测正在进行中，确定返回首页吗？\n当前进度将保存。',
+                    () => {
+                        saveStateToStorage();
+                        window.location.href = 'P2_操作员首页_新建检测任务.html';
+                    }
+                );
+            } else {
+                window.location.href = 'P2_操作员首页_新建检测任务.html';
+            }
+        }
+
+        // ==================== 模态对话框 ====================
+        function showModal(title, message, onConfirm, hideCancel = false) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalOverlay').classList.add('show');
+
+            const confirmBtn = document.getElementById('modalConfirm');
+            const cancelBtn = document.getElementById('modalCancel');
+
+            if (hideCancel) {
+                cancelBtn.style.display = 'none';
+            } else {
+                cancelBtn.style.display = 'inline-block';
+            }
+
+            confirmBtn.onclick = () => {
+                document.getElementById('modalOverlay').classList.remove('show');
+                if (onConfirm) onConfirm();
+            };
+
+            cancelBtn.onclick = () => {
+                document.getElementById('modalOverlay').classList.remove('show');
+            };
+        }
+
+        // ==================== 更新时间 ====================
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('currentTime').textContent = 
+                `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // ==================== 页面加载 ====================
+        window.addEventListener('load', () => {
+            parseUrlParams();
+            updateTime();
+            setInterval(updateTime, 1000);
+        });
+    </script>
+</body>
+</html>
